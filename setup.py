@@ -16,4 +16,8 @@ if __name__ == "__main__":
         version=versioneer.get_version(),
         cmdclass=versioneer.get_cmdclass(),
         setup_requires=SETUP_REQUIRES,
+        entry_points={'console_scripts': [
+            'aroma=aroma.cli.aroma:_main',
+            'classification_plot=aroma.cli.classification_plot:_main'
+        ]},
     )
