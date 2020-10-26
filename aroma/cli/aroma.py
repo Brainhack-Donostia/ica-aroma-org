@@ -159,7 +159,8 @@ def _get_parser():
 def _main(argv=None):
     """Entry point"""
     options = _get_parser().parse_args(argv)
-    aroma.aroma_workflow(options)
+    kwargs = vars(options)
+    aroma.aroma_workflow(**kwargs)
 
 
 if __name__ == "__main__":

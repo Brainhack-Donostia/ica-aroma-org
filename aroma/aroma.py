@@ -10,6 +10,12 @@ from . import utils, features
 
 def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
                    denType, mask, TR, overwrite, generate_plots):
+    """Run the AROMA workflow.
+
+    Parameters
+    ----------
+    inFeat
+    """
     # Change to script directory
     cwd = op.realpath(op.curdir)
     scriptDir = op.dirname(op.abspath(__file__))
