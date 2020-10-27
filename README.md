@@ -1,7 +1,7 @@
 # ica-aroma-org
 
-[![codecov](https://codecov.io/gh/ica-aroma-org/aroma/branch/master/graph/badge.svg)](https://codecov.io/gh/ica-aroma-org/aroma)
-[![CircleCI](https://circleci.com/gh/ica-aroma-org/aroma.svg?branch=master&style=shield)](https://circleci.com/gh/ica-aroma-org/aroma)
+[![codecov](https://codecov.io/gh/Brainhack-Donostia/ica-aroma-org/branch/master/graph/badge.svg)](https://codecov.io/gh/Brainhack-Donostia/ica-aroma-org)
+[![CircleCI](https://circleci.com/gh/Brainhack-Donostia/ica-aroma-org.svg?branch=master&style=shield)](https://circleci.com/gh/Brainhack-Donostia/ica-aroma-org)
 
 Repository to prepare the ICA-AROMA tutorial for Brainhack Donostia.
 
