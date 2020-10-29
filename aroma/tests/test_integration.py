@@ -12,6 +12,4 @@ def test_integration(skip_integration, nilearn_data):
 
     test_path, _ = split(nilearn_data.func[0])
 
-    breakpoint()
-
     subprocess.run(f'aroma -o {test_path} -i {nilearn_data.func[0]} -m {nilearn_data.confounds[0]}')
