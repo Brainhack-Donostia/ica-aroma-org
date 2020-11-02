@@ -252,7 +252,7 @@ def _main(argv=None):
     cwd = os.path.realpath(os.path.curdir)
     scriptDir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(scriptDir)
-
+    breakpoint()
     options = _get_parser().parse_args(argv)
     main(options)
 

@@ -396,13 +396,13 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
         # Get sum of Z-values of the voxels located within the CSF (calculate via the mean and number of non-zero voxels)
         csfVox = int(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                     tempIC,
-                                                    '-k mask_csf.nii.gz',
+                                                    '-k ../masks/mask_csf.nii.gz',
                                                     '-V | awk \'{print $1}\''])))
 
         if not (csfVox == 0):
             csfMean = float(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                            tempIC,
-                                                           '-k mask_csf.nii.gz',
+                                                           '-k ../masks/mask_csf.nii.gz',
                                                            '-M'])))
         else:
             csfMean = 0
@@ -412,12 +412,12 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
         # Get sum of Z-values of the voxels located within the Edge (calculate via the mean and number of non-zero voxels)
         edgeVox = int(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                      tempIC,
-                                                     '-k mask_edge.nii.gz',
+                                                     '-k ../masks/mask_edge.nii.gz',
                                                      '-V | awk \'{print $1}\''])))
         if not (edgeVox == 0):
             edgeMean = float(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                             tempIC,
-                                                            '-k mask_edge.nii.gz',
+                                                            '-k ../masks/mask_edge.nii.gz',
                                                             '-M'])))
         else:
             edgeMean = 0
@@ -427,12 +427,12 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
         # Get sum of Z-values of the voxels located outside the brain (calculate via the mean and number of non-zero voxels)
         outVox = int(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                     tempIC,
-                                                    '-k mask_out.nii.gz',
+                                                    '-k ../masks/mask_out.nii.gz',
                                                     '-V | awk \'{print $1}\''])))
         if not (outVox == 0):
             outMean = float(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                            tempIC,
-                                                           '-k mask_out.nii.gz',
+                                                           '-k ../masks/mask_out.nii.gz',
                                                            '-M'])))
         else:
             outMean = 0

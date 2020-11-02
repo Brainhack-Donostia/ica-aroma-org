@@ -21,4 +21,4 @@ def testpath(tmp_path_factory):
 
 @pytest.fixture
 def nilearn_data(testpath):
-    return fetch_development_fmri(n_subjects=1)
+    return fetch_development_fmri(n_subjects=1, age_group="adult")
