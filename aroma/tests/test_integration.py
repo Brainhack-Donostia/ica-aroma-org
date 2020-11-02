@@ -40,8 +40,8 @@ def test_integration(skip_integration, nilearn_data):
 
     # Check classification overview file
     classification_overview = pd.read_csv(join(out_path, 'classification_overview.txt'), sep='\t', index_col='IC')
-
-    assert (classification_overview.loc[1].values == [True, 0.66, 0.65, 0.96, 0.0]).all()
+    overview_true = np.array([True, 0.66, 0.65, 0.96, 0.0], dtype=object)
+    assert (classification_overview.loc[1].values == overview_true).all()
 
     # Check feature scores
     f_scores = np.loadtxt(join(out_path, 'feature_scores.txt'))
