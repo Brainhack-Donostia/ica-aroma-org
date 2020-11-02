@@ -1,11 +1,13 @@
 """
 Functions to calculate ICA-AROMA features for component classification.
 """
+import os
+
 import nibabel as nib
 import numpy as np
 from nilearn import image, masking
 
-from .utils import cross_correlation
+from .utils import cross_correlation, get_resource_path
 
 
 def feature_time_series(melmix, mc):
@@ -71,8 +73,9 @@ def feature_time_series(melmix, mc):
     for i in range(nsplits):
         # Select a random subset of 90% of the dataset rows
         # (*without* replacement)
-        chosen_rows = np.random.sample(population=range(nmixrows),
-                                       k=nrows_to_choose)
+        chosen_rows = np.random.choice(a=range(nmixrows),
+                                       size=nrows_to_choose,
+                                       replace=False)
 
         # Combined correlations between RP and IC time-series, squared and
         # non squared
@@ -208,7 +211,7 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
 
         # Get sum of Z-values of the voxels located within the CSF
         # (calculate via the mean and number of non-zero voxels)
-        csf_mask = "mask_csf.nii.gz"
+        csf_mask = os.path.join(get_resource_path(), "mask_csf.nii.gz")
         csf_data = masking.apply_mask(tempIC, csf_mask)
         csfVox = np.sum(csf_data != 0)  # number of nonzero voxels in mask
 
@@ -221,7 +224,7 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
 
         # Get sum of Z-values of the voxels located within the Edge
         # (calculate via the mean and number of non-zero voxels)
-        edge_mask = "mask_edge.nii.gz"
+        edge_mask = os.path.join(get_resource_path(), "mask_edge.nii.gz")
         edge_data = masking.apply_mask(tempIC, edge_mask)
         edgeVox = np.sum(edge_data != 0)  # number of nonzero voxels in mask
 
@@ -234,7 +237,7 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
 
         # Get sum of Z-values of the voxels located outside the brain
         # (calculate via the mean and number of non-zero voxels)
-        out_mask = "mask_out.nii.gz"
+        out_mask = os.path.join(get_resource_path(), "mask_out.nii.gz")
         out_data = masking.apply_mask(tempIC, out_mask)
         outVox = np.sum(out_data != 0)  # number of nonzero voxels in mask
 

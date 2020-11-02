@@ -3,6 +3,7 @@
 import os
 import os.path as op
 import subprocess
+from glob import glob
 
 import nibabel as nib
 import numpy as np
@@ -145,7 +146,11 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
     )
     os.system(merge_command)  # inputs
 
-    os.remove(op.join(outDir, 'thr_zstat????.nii.gz'))
+    component_images = glob(
+        op.join(outDir, 'thr_zstat[0-9][0-9][0-9][0-9].nii.gz')
+    )
+    for f in component_images:
+        os.remove(f)
 
     # Apply the mask to the merged file (in case a melodic-directory was
     # predefined and run with a different mask)
@@ -438,3 +443,12 @@ def denoising(fslDir, inFile, outDir, melmix, denType, denIdx):
                 inFile,
                 op.join(outDir, 'denoised_func_data_aggr.nii.gz')
             )
+
+
+def get_resource_path():
+    """
+    Returns the path to general resources, terminated with separator. Resources
+    are kept outside package folder in "datasets".
+    Based on function by Yaroslav Halchenko used in Neurosynth Python package.
+    """
+    return op.abspath(op.join(op.dirname(__file__), "resources") + op.sep)
