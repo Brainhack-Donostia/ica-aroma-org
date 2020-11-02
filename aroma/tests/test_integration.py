@@ -51,4 +51,4 @@ def test_integration(skip_integration, nilearn_data):
 
     # Check motion ICs
     mot_ics = np.loadtxt(join(out_path, 'classified_motion_ICs.txt'), delimiter=',')
-    assert np.array_equal(mot_ics.astype(int), np.array([1, 2, 3, 4, 6, 7, 13, 14, 19, 24, 36]))
+    assert (np.in1d(mot_ics.astype(int), np.array([1, 2, 3, 4, 6, 13, 24]))).all()
