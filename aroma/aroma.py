@@ -8,7 +8,7 @@ import os.path as op
 import argparse
 import subprocess
 import shutil
-from . import utils as aromafunc
+from . import utils, features
 
 
 def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
@@ -170,27 +170,27 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
     #---------------------------------------- Run ICA-AROMA ----------------------------------------#
 
     print('Step 1) MELODIC')
-    aromafunc.runICA(fslDir, inFile, outDir, melDir, new_mask, dim, TR)
+    utils.runICA(fslDir, inFile, outDir, melDir, new_mask, dim, TR)
 
     print('Step 2) Automatic classification of the components')
     print('  - registering the spatial maps to MNI')
     melIC = os.path.join(outDir, 'melodic_IC_thr.nii.gz')
     melIC_MNI = os.path.join(outDir, 'melodic_IC_thr_MNI2mm.nii.gz')
-    aromafunc.register2MNI(fslDir, melIC, melIC_MNI, affmat, warp)
+    utils.register2MNI(fslDir, melIC, melIC_MNI, affmat, warp)
 
     print('  - extracting the CSF & Edge fraction features')
-    edgeFract, csfFract = aromafunc.feature_spatial(fslDir, outDir, scriptDir, melIC_MNI)
+    edgeFract, csfFract = features.feature_spatial(fslDir, outDir, scriptDir, melIC_MNI)
 
     print('  - extracting the Maximum RP correlation feature')
     melmix = os.path.join(outDir, 'melodic.ica', 'melodic_mix')
-    maxRPcorr = aromafunc.feature_time_series(melmix, mc)
+    maxRPcorr = features.feature_time_series(melmix, mc)
 
     print('  - extracting the High-frequency content feature')
     melFTmix = os.path.join(outDir, 'melodic.ica', 'melodic_FTmix')
-    HFC = aromafunc.feature_frequency(melFTmix, TR)
+    HFC = features.feature_frequency(melFTmix, TR)
 
     print('  - classification')
-    motionICs = aromafunc.classification(outDir, maxRPcorr, edgeFract, HFC, csfFract)
+    motionICs = utils.classification(outDir, maxRPcorr, edgeFract, HFC, csfFract)
 
     if generate_plots:
         from classification_plots import classification_plot
@@ -200,7 +200,7 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
 
     if (denType != 'no'):
         print('Step 3) Data denoising')
-        aromafunc.denoising(fslDir, inFile, outDir, melmix, denType, motionICs)
+        utils.denoising(fslDir, inFile, outDir, melmix, denType, motionICs)
 
     # Revert to old directory
     os.chdir(cwd)
