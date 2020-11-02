@@ -40,13 +40,14 @@ def test_integration(skip_integration, nilearn_data):
 
     # Check classification overview file
     classification_overview = pd.read_csv(join(out_path, 'classification_overview.txt'), sep='\t', index_col='IC')
-    overview_true = np.array([True, 0.66, 0.65, 0.96, 0.0], dtype=object)
-    assert (classification_overview.loc[1].values == overview_true).all()
+    overview_true = np.array([True, 0.64, 0.65, 0.96, 0.0], dtype=object)
+    assert classification_overview.loc[1].values[0]
+    assert np.allclose(classification_overview.loc[1].values[1:].astype(float), overview_true[1:].astype(float), atol=1e-3)
 
     # Check feature scores
     f_scores = np.loadtxt(join(out_path, 'feature_scores.txt'))
     f_true = np.array([6.563544605388391684e-01, 6.510340668773902939e-01, 9.635568513119533440e-01, 4.486414893783927278e-03])
-    assert np.allclose(f_scores[0], f_true)
+    assert np.allclose(f_scores[0], f_true, atol=1e-3)
 
     # Check motion ICs
     mot_ics = np.loadtxt(join(out_path, 'classified_motion_ICs.txt'), delimiter=',')
