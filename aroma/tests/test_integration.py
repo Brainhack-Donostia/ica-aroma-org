@@ -46,7 +46,7 @@ def test_integration(skip_integration, nilearn_data):
     # Check feature scores
     f_scores = np.loadtxt(join(out_path, 'feature_scores.txt'))
     f_true = np.array([6.563544605388391684e-01, 6.510340668773902939e-01, 9.635568513119533440e-01, 4.486414893783927278e-03])
-    assert (np.around(f_scores[0], decimals=4) == np.around(f_true, decimals=4)).all()
+    assert (np.around(f_scores[0], decimals=2) == np.around(f_true, decimals=2)).all()
 
     # Check motion ICs
     mot_ics = np.loadtxt(join(out_path, 'classified_motion_ICs.txt'), delimiter=',')
