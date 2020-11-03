@@ -177,9 +177,10 @@ def feature_spatial(melIC):
     melIC_img = nib.load(melIC)
     numICs = melIC_img.shape[3]
 
-    csf_mask = os.path.join(get_resource_path(), "mask_csf.nii.gz")
-    edge_mask = os.path.join(get_resource_path(), "mask_edge.nii.gz")
-    out_mask = os.path.join(get_resource_path(), "mask_out.nii.gz")
+    masks_dir = get_resource_path()
+    csf_mask = os.path.join(masks_dir, "mask_csf.nii.gz")
+    edge_mask = os.path.join(masks_dir, "mask_edge.nii.gz")
+    out_mask = os.path.join(masks_dir, "mask_out.nii.gz")
 
     # Loop over ICs
     edgeFract = np.zeros(numICs)
@@ -198,7 +199,7 @@ def feature_spatial(melIC):
 
         if totSum == 0:
             print("\t- The spatial map of component {} is empty. "
-                  "Please check!".format(i+1))
+                  "Please check!".format(i + 1))
 
         # Get sum of Z-values of the voxels located within the CSF
         # (calculate via the mean and number of non-zero voxels)
