@@ -2,6 +2,7 @@
 import argparse
 
 from aroma import aroma
+from aroma.cli.parser_utils import is_valid_file, is_valid_path
 
 
 def _get_parser():
@@ -46,17 +47,16 @@ def _get_parser():
         required=False,
         help=(
             "File name of the motion parameters obtained after motion "
-            "realignment (e.g., FSL mcflirt). Note that the order of "
+            "realignment (e.g., FSL MCFLIRT). Note that the order of "
             "parameters does not matter, should your file not originate "
-            "from FSL mcflirt. (e.g., "
-            "/home/user/PROJECT/SUBJECT.feat/mc/prefiltered_func_data_mcf.par"
+            "from FSL MCFLIRT."
         ),
     )
     nonfeatoptions.add_argument(
         "-a",
         "-affmat",
         dest="affmat",
-        default="",
+        default=None,
         help=(
             "File name of the mat-file describing the affine registration "
             "(e.g., FSL FLIRT) of the functional data to structural space "
@@ -68,7 +68,7 @@ def _get_parser():
         "-w",
         "-warp",
         dest="warp",
-        default="",
+        default=None,
         help=(
             "File name of the warp-file describing the non-linear "
             "registration (e.g., FSL FNIRT) of the structural data to MNI152 "
@@ -80,7 +80,7 @@ def _get_parser():
         "-m",
         "-mask",
         dest="mask",
-        default="",
+        default=None,
         help=(
             "File name of the mask to be used for MELODIC (denoising will be "
             "performed on the original/non-masked input data)"

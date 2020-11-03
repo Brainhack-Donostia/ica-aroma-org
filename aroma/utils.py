@@ -203,7 +203,7 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
     # If the no affmat- or warp-file has been specified, assume that the data
     # is already in MNI152 space. In that case only check if resampling to
     # 2mm is needed
-    if (len(affmat) == 0) and (len(warp) == 0):
+    if affmat and warp:
         in_img = nib.load(inFile)
         # Get 3D voxel size
         pixdim1, pixdim2, pixdim3 = in_img.header.get_zooms()[:3]
@@ -222,7 +222,7 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
     # If only a warp-file has been specified, assume that the data has already
     # been registered to the structural scan. In that case apply the warping
     # without a affmat
-    elif (len(affmat) == 0) and (len(warp) != 0):
+    elif affmat and warp:
         # Apply warp
         os.system(' '.join([op.join(fslDir, 'applywarp'),
                             '--ref=' + ref,
@@ -233,7 +233,7 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
 
     # If only a affmat-file has been specified perform affine registration to
     # MNI
-    elif (len(affmat) != 0) and (len(warp) == 0):
+    elif affmat and warp:
         os.system(' '.join([op.join(fslDir, 'flirt'),
                             '-ref ' + ref,
                             '-in ' + inFile,
