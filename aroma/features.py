@@ -151,7 +151,7 @@ def feature_frequency(melFTmix, TR):
     return HFC
 
 
-def feature_spatial(fslDir, tempDir, aromaDir, melIC):
+def feature_spatial(melIC):
     """Extract the spatial feature scores.
 
     For each IC it determines the fraction of the mixture modeled thresholded
@@ -160,14 +160,6 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
 
     Parameters
     ----------
-    fslDir : str
-        Full path of the bin-directory of FSL
-    tempDir : str
-        Full path of a directory where temporary files can be stored
-        (called 'temp_IC.nii.gz')
-    aromaDir : str
-        Full path of the ICA-AROMA directory, containing the mask-files
-        (mask_edge.nii.gz, mask_csf.nii.gz & mask_out.nii.gz)
     melIC : str
         Full path of the nii.gz file containing mixture-modeled threholded
         (p>0.5) Z-maps, registered to the MNI152 2mm template
