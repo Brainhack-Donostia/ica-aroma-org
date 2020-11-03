@@ -2,7 +2,7 @@ import numpy as np
 import os
 import pandas as pd
 import subprocess
-from os.path import join, split, isfile
+from os.path import join, split, isfile, realpath, curdir
 from argparse import Namespace
 
 from aroma.aroma import aroma_workflow
@@ -13,6 +13,9 @@ import pytest
 def test_integration(skip_integration, nilearn_data):
     if skip_integration:
         pytest.skip('Skipping integration test')
+
+    cwd = realpath(curdir)
+    resources_path = join(cwd, 'aroma', 'resources')
 
     # Obtain test path
     test_path, _ = split(nilearn_data.func[0])
@@ -42,16 +45,17 @@ def test_integration(skip_integration, nilearn_data):
     assert isfile(join(out_path, 'melodic_IC_thr_MNI2mm.nii.gz'))
 
     # Check classification overview file
-    classification_overview = pd.read_csv(join(out_path, 'classification_overview.txt'), sep='\t', index_col='IC')
-    overview_true = np.array([True, 0.66, 0.65, 0.96, 0.0], dtype=object)
-    assert classification_overview.loc[1].values[0]
-    assert np.allclose(classification_overview.loc[1].values[1:].astype(float), overview_true[1:].astype(float), atol=0.3)
+    true_classification_overview = pd.read_csv(join(resources_path, 'classification_overview.txt'), sep='\t', index_col='IC', nrows=4)
+    classification_overview = pd.read_csv(join(out_path, 'classification_overview.txt'), sep='\t', index_col='IC', nrows=4)
+
+    assert np.allclose(true_classification_overview.iloc[:, 1:], classification_overview.iloc[:, 1:], atol=0.05)
 
     # Check feature scores
     f_scores = np.loadtxt(join(out_path, 'feature_scores.txt'))
-    f_true = np.array([6.563544605388391684e-01, 6.510340668773902939e-01, 9.635568513119533440e-01, 4.486414893783927278e-03])
-    assert np.allclose(f_scores[0], f_true, atol=0.01)
+    f_true = np.loadtxt(join(resources_path, 'feature_scores.txt'))
+    assert np.allclose(f_true[0,:], f_scores[0, :], atol=0.01)
 
     # Check motion ICs
     mot_ics = np.loadtxt(join(out_path, 'classified_motion_ICs.txt'), delimiter=',')
-    assert (np.in1d(np.array([1, 2, 3, 4]), mot_ics.astype(int))).all()
+    true_mot_ics = np.loadtxt(join(resources_path, 'classified_motion_ICs.txt'), delimiter=',')
+    assert np.allclose(true_mot_ics[:4], mot_ics[:4])
