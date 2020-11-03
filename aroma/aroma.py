@@ -8,8 +8,21 @@ import nibabel as nib
 from . import utils, features
 
 
-def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
-                   denType, mask, TR, overwrite, generate_plots):
+def aroma_workflow(
+    outDir,
+    inFeat=None,
+    inFile=None,
+    mc=None,
+    melDir=None,
+    affmat=None,
+    warp=None,
+    dim=0,
+    denType="nonaggr",
+    mask=None,
+    TR=None,
+    overwrite=False,
+    generate_plots=True,
+):
     """Run the AROMA workflow.
 
     Parameters
@@ -21,27 +34,15 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
     scriptDir = op.dirname(op.abspath(__file__))
     os.chdir(scriptDir)
 
-    print(
-        "\n------------------------ RUNNING ICA-AROMA ------------------------"
-    )
-    print(
-        "-------- 'ICA-based Automatic Removal Of Motion Artifacts' --------\n"
-    )
+    print("\n------------------------ RUNNING ICA-AROMA ------------------------")
+    print("-------- 'ICA-based Automatic Removal Of Motion Artifacts' --------\n")
 
     # Define variables based on the type of input (i.e. Feat directory or
     # specific input arguments), and check whether the specified files exist.
-    cancel = False
-
     if inFeat:
-        inFeat = inFeat
-
         # Check whether the Feat directory exists
         if not op.isdir(inFeat):
-            print("The specified Feat directory does not exist.")
-            print(
-                "\n----------------- ICA-AROMA IS CANCELED -----------------\n"
-            )
-            return
+            raise Exception("The specified FEAT directory does not exist.")
 
         # Define the variables which should be located in the Feat directory
         inFile = op.join(inFeat, "filtered_func_data.nii.gz")
@@ -51,19 +52,20 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
 
         # Check whether these files actually exist
         if not op.isfile(inFile):
-            print("Missing filtered_func_data.nii.gz in Feat directory.")
-            cancel = True
+            raise Exception("Missing filtered_func_data.nii.gz in Feat directory.")
+
         if not op.isfile(mc):
-            print("Missing mc/prefiltered_func_data_mcf.mat in Feat "
-                  "directory.")
-            cancel = True
+            raise Exception(
+                "Missing mc/prefiltered_func_data_mcf.mat in Feat " "directory."
+            )
+
         if not op.isfile(affmat):
-            print("Missing reg/example_func2highres.mat in Feat directory.")
-            cancel = True
+            raise Exception("Missing reg/example_func2highres.mat in Feat directory.")
+
         if not op.isfile(warp):
-            print("Missing reg/highres2standard_warp.nii.gz in Feat "
-                  "directory.")
-            cancel = True
+            raise Exception(
+                "Missing reg/highres2standard_warp.nii.gz in Feat " "directory."
+            )
 
         # Check whether a melodic.ica directory exists
         if op.isdir(op.join(inFeat, "filtered_func_data.ica")):
@@ -72,33 +74,23 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
         # Check whether the files exist
         if not inFile:
             print("No input file specified.")
-        else:
-            if not op.isfile(inFile):
-                print("The specified input file does not exist.")
-                cancel = True
+        elif not op.isfile(inFile):
+            raise Exception("The specified input file does not exist.")
 
         if not mc:
             print("No mc file specified.")
-        else:
-            if not op.isfile(mc):
-                print("The specified mc file does does not exist.")
-                cancel = True
+        elif not op.isfile(mc):
+            raise Exception("The specified mc file does does not exist.")
 
-        if affmat:
-            if not op.isfile(affmat):
-                print("The specified affmat file does not exist.")
-                cancel = True
+        if affmat and not op.isfile(affmat):
+            raise Exception("The specified affmat file does not exist.")
 
-        if warp:
-            if not op.isfile(warp):
-                print("The specified warp file does not exist.")
-                cancel = True
+        if warp and not op.isfile(warp):
+            raise Exception("The specified warp file does not exist.")
 
     # Check if the mask exists, when specified.
-    if mask:
-        if not op.isfile(mask):
-            print("The specified mask does not exist.")
-            cancel = True
+    if mask and not op.isfile(mask):
+        raise Exception("The specified mask does not exist.")
 
     # Check if the type of denoising is correctly specified, when specified
     if denType not in ("nonaggr", "aggr", "both", "no"):
@@ -108,21 +100,13 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
         )
         denType = "nonaggr"
 
-    # If the criteria for file/directory specifications have not been met.
-    # Cancel ICA-AROMA.
-    if cancel:
-        print(
-            "\n------------------- ICA-AROMA IS CANCELED -------------------\n"
-        )
-        return
-
-    # ------------------------------------------- PREPARE --------------------#
+    # Prepare
 
     # Define the FSL-bin directory
     fslDir = op.join(os.environ["FSLDIR"], "bin", "")
 
     # Create output directory if needed
-    if op.isdir(outDir) and overwrite is False:
+    if op.isdir(outDir) and not overwrite:
         print(
             "Output directory",
             outDir,
@@ -132,9 +116,11 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
             existing output.""",
         )
         return
-    elif op.isdir(outDir) and overwrite is True:
-        print("Warning! Output directory {} exists and will be overwritten."
-              "\n".format(outDir))
+    elif op.isdir(outDir) and overwrite:
+        print(
+            "Warning! Output directory {} exists and will be overwritten."
+            "\n".format(outDir)
+        )
         shutil.rmtree(outDir)
         os.makedirs(outDir)
     else:
@@ -153,13 +139,12 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
             + "s) is correct!\n"
         )
     elif TR == 0:
-        print(
+        raise Exception(
             "TR is zero. ICA-AROMA requires a valid TR and will therefore "
             "exit. Please check the header, or define the TR as an additional "
             "argument.\n"
             "-------------- ICA-AROMA IS CANCELED ------------\n"
         )
-        return
 
     # Define/create mask. Either by making a copy of the specified mask, or by
     # creating a new one.
@@ -186,9 +171,7 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
                 "intensity over time in the fMRI data. Please check!\n"
             )
         math_command = "{0} {1} -Tstd -bin {2}".format(
-            op.join(fslDir, "fslmaths"),
-            inFile,
-            new_mask
+            op.join(fslDir, "fslmaths"), inFile, new_mask
         )
         os.system(math_command)
 
@@ -203,9 +186,7 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
     utils.register2MNI(fslDir, melIC, melIC_MNI, affmat, warp)
 
     print("  - extracting the CSF & Edge fraction features")
-    edgeFract, csfFract = features.feature_spatial(
-        fslDir, outDir, scriptDir, melIC_MNI
-    )
+    edgeFract, csfFract = features.feature_spatial(fslDir, outDir, scriptDir, melIC_MNI)
 
     print("  - extracting the Maximum RP correlation feature")
     melmix = op.join(outDir, "melodic.ica", "melodic_mix")
@@ -216,20 +197,13 @@ def aroma_workflow(inFeat, inFile, mc, melDir, affmat, warp, outDir, dim,
     HFC = features.feature_frequency(melFTmix, TR)
 
     print("  - classification")
-    motionICs = utils.classification(
-        outDir,
-        maxRPcorr,
-        edgeFract,
-        HFC,
-        csfFract
-    )
+    motionICs = utils.classification(outDir, maxRPcorr, edgeFract, HFC, csfFract)
 
     if generate_plots:
         from . import plotting
 
         plotting.classification_plot(
-            op.join(outDir, "classification_overview.txt"),
-            outDir
+            op.join(outDir, "classification_overview.txt"), outDir
         )
 
     if denType != "no":
