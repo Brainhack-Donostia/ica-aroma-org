@@ -123,10 +123,11 @@ def feature_frequency(melFTmix, TR):
 
     # Load melodic_FTmix file
     FT = np.loadtxt(melFTmix)
+    n_frequencies, _ = FT.shape
 
     # Determine which frequencies are associated with every row in the
-    # melodic_FTmix file  (assuming the rows range from 0Hz to Nyquist)
-    f = Ny * (np.array(list(range(1, FT.shape[0] + 1)))) / (FT.shape[0])
+    # melodic_FTmix file (assuming the rows range from 0Hz to Nyquist)
+    f = Ny * np.arange(1, n_frequencies + 1) / n_frequencies
 
     # Only include frequencies higher than 0.01Hz
     fincl = np.squeeze(np.array(np.where(f > 0.01)))
