@@ -21,7 +21,7 @@ def test_feature_time_series(nilearn_data):
 
     # Get path to melmix file
     cwd = utils.get_resource_path()
-    melmix = op.join(cwd, 'aroma', 'resources', 'melodic_mix')
+    melmix = op.join(cwd, 'melodic_mix')
 
     # Run feature_time_series
     maxRPcorr = features.feature_time_series(melmix, mc_path)
@@ -36,7 +36,7 @@ def test_feature_frequency(nilearn_data):
 
     # Get path to melmix file
     cwd = utils.get_resource_path()
-    melTmix = op.join(cwd, 'aroma', 'resources', 'melodic_FTmix')
+    melTmix = op.join(cwd, 'melodic_FTmix')
 
     HFC = features.feature_frequency(melTmix, TR=2)
 
