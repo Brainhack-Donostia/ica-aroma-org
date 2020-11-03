@@ -36,6 +36,14 @@ def aroma_workflow(
 
     print("\n------------------------ RUNNING ICA-AROMA ------------------------")
     print("-------- 'ICA-based Automatic Removal Of Motion Artifacts' --------\n")
+    if inFeat and inFile:
+        raise ValueError("Only one of 'inFeat' and 'inFile' may be provided.")
+
+    if inFeat and (mc or affmat or warp or mask):
+        raise ValueError(
+            "Arguments 'mc', 'affmat', 'warp', and 'mask' are incompatible "
+            "with argument 'inFeat'."
+        )
 
     # Define variables based on the type of input (i.e. Feat directory or
     # specific input arguments), and check whether the specified files exist.
