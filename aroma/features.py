@@ -20,15 +20,19 @@ def feature_time_series(melmix, mc):
     Parameters
     ----------
     melmix : str
-        Full path of the melodic_mix text file
+        Full path of the melodic_mix text file.
+        Stored array is (time x component).
     mc : str
-        Full path of the text file containing the realignment parameters
+        Full path of the text file containing the realignment parameters.
+        Motion parameters are (time x 6), with the first three columns being
+        rotation parameters (in radians) and the final three being translation
+        parameters (in mm).
 
     Returns
     -------
     maxRPcorr : array_like
         Array of the maximum RP correlation feature scores for the components
-        of the melodic_mix file
+        of the melodic_mix file.
     """
     # Read melodic mix file (IC time-series), subsequently define a set of
     # squared time-series
@@ -105,7 +109,9 @@ def feature_frequency(melFTmix, TR):
     Parameters
     ----------
     melFTmix : str
-        Full path of the melodic_FTmix text file
+        Full path of the melodic_FTmix text file.
+        Stored array is (frequency x component), with frequencies
+        ranging from 0 Hz to Nyquist frequency.
     TR : float
         TR (in seconds) of the fMRI data
 
@@ -162,8 +168,8 @@ def feature_spatial(melIC):
     Parameters
     ----------
     melIC : str
-        Full path of the nii.gz file containing mixture-modeled threholded
-        (p>0.5) Z-maps, registered to the MNI152 2mm template
+        Full path of the nii.gz file containing mixture-modeled thresholded
+        (p<0.5) Z-maps, registered to the MNI152 2mm template
 
     Returns
     -------
