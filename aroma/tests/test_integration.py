@@ -24,7 +24,7 @@ def test_integration(skip_integration, nilearn_data):
     mc_path = join(test_path, 'mc.tsv')
     mc.to_csv(mc_path, sep='\t', index=False, header=None)
 
-    args = Namespace(TR=None, affmat='', denType='nonaggr', dim=0, generate_plots=False, inFeat=None, inFile=nilearn_data.func[0], mask='',
+    args = Namespace(TR=2, affmat='', denType='nonaggr', dim=0, generate_plots=False, inFeat=None, inFile=nilearn_data.func[0], mask='',
                      mc=mc_path, melDir='', outDir=out_path, overwrite=True, warp='')
 
     main.main(args)
@@ -51,4 +51,4 @@ def test_integration(skip_integration, nilearn_data):
 
     # Check motion ICs
     mot_ics = np.loadtxt(join(out_path, 'classified_motion_ICs.txt'), delimiter=',')
-    assert (np.in1d(mot_ics.astype(int), np.array([1, 2, 3, 4, 6, 13, 24]))).all()
+    assert (np.in1d(np.array([1, 2, 3, 4]), mot_ics.astype(int))).all()
