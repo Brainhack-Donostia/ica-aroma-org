@@ -38,12 +38,14 @@ def _get_parser():
         "-i",
         "-in",
         dest="inFile",
+        type=lambda x: is_valid_file(parser, x),
         required=False,
         help="Input file name of fMRI data (.nii.gz)",
     )
     nonfeatoptions.add_argument(
         "-mc",
         dest="mc",
+        type=lambda x: is_valid_file(parser, x),
         required=False,
         help=(
             "File name of the motion parameters obtained after motion "
@@ -56,6 +58,7 @@ def _get_parser():
         "-a",
         "-affmat",
         dest="affmat",
+        type=lambda x: is_valid_file(parser, x),
         default=None,
         help=(
             "File name of the mat-file describing the affine registration "
@@ -68,6 +71,7 @@ def _get_parser():
         "-w",
         "-warp",
         dest="warp",
+        type=lambda x: is_valid_file(parser, x),
         default=None,
         help=(
             "File name of the warp-file describing the non-linear "
@@ -80,6 +84,7 @@ def _get_parser():
         "-m",
         "-mask",
         dest="mask",
+        type=lambda x: is_valid_file(parser, x),
         default=None,
         help=(
             "File name of the mask to be used for MELODIC (denoising will be "
@@ -94,6 +99,7 @@ def _get_parser():
         "-feat",
         dest="inFeat",
         required=False,
+        type=lambda x: is_valid_path(parser, x),
         help=(
             "Feat directory name (Feat should have been run without temporal "
             "filtering and including registration to MNI152)"
@@ -107,6 +113,7 @@ def _get_parser():
         "-den",
         dest="denType",
         default="nonaggr",
+        choices=["nonaggr", "aggr", "both", "no"],
         help=(
             "Type of denoising strategy: 'no': only classification, no "
             "denoising; 'nonaggr': non-aggresssive denoising (default); "
@@ -118,6 +125,7 @@ def _get_parser():
         "-md",
         "-meldir",
         dest="melDir",
+        type=lambda x: is_valid_path(parser, x),
         default="",
         help=(
             "MELODIC directory name, in case MELODIC has been run previously."
