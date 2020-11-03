@@ -177,6 +177,10 @@ def feature_spatial(melIC):
     melIC_img = nib.load(melIC)
     numICs = melIC_img.shape[3]
 
+    csf_mask = os.path.join(get_resource_path(), "mask_csf.nii.gz")
+    edge_mask = os.path.join(get_resource_path(), "mask_edge.nii.gz")
+    out_mask = os.path.join(get_resource_path(), "mask_out.nii.gz")
+
     # Loop over ICs
     edgeFract = np.zeros(numICs)
     csfFract = np.zeros(numICs)
@@ -190,55 +194,26 @@ def feature_spatial(melIC):
         # Get sum of Z-values within the total Z-map (calculate via the mean
         # and number of non-zero voxels)
         tempICdata = tempIC.get_fdata()
-        totVox = np.sum(tempICdata != 0)  # number of nonzero voxels in image
+        totSum = np.sum(tempICdata)
 
-        if totVox != 0:
-            totMean = np.mean(tempICdata[tempICdata != 0])
-        else:
+        if totSum == 0:
             print("\t- The spatial map of component {} is empty. "
                   "Please check!".format(i+1))
-            totMean = 0
-
-        totSum = totMean * totVox
 
         # Get sum of Z-values of the voxels located within the CSF
         # (calculate via the mean and number of non-zero voxels)
-        csf_mask = os.path.join(get_resource_path(), "mask_csf.nii.gz")
         csf_data = masking.apply_mask(tempIC, csf_mask)
-        csfVox = np.sum(csf_data != 0)  # number of nonzero voxels in mask
-
-        if not (csfVox == 0):
-            csfMean = np.mean(csf_data[csf_data != 0])
-        else:
-            csfMean = 0
-
-        csfSum = csfMean * csfVox
+        csfSum = np.sum(csf_data)
 
         # Get sum of Z-values of the voxels located within the Edge
         # (calculate via the mean and number of non-zero voxels)
-        edge_mask = os.path.join(get_resource_path(), "mask_edge.nii.gz")
         edge_data = masking.apply_mask(tempIC, edge_mask)
-        edgeVox = np.sum(edge_data != 0)  # number of nonzero voxels in mask
-
-        if not (edgeVox == 0):
-            edgeMean = np.mean(edge_data[edge_data != 0])
-        else:
-            edgeMean = 0
-
-        edgeSum = edgeMean * edgeVox
+        edgeSum = np.sum(edge_data)
 
         # Get sum of Z-values of the voxels located outside the brain
         # (calculate via the mean and number of non-zero voxels)
-        out_mask = os.path.join(get_resource_path(), "mask_out.nii.gz")
         out_data = masking.apply_mask(tempIC, out_mask)
-        outVox = np.sum(out_data != 0)  # number of nonzero voxels in mask
-
-        if not (outVox == 0):
-            outMean = np.mean(out_data[out_data != 0])
-        else:
-            outMean = 0
-
-        outSum = outMean * outVox
+        outSum = np.sum(out_data)
 
         # Determine edge and CSF fraction
         if not (totSum == 0):
