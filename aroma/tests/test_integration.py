@@ -5,7 +5,7 @@ import subprocess
 from os.path import join, split, isfile
 from argparse import Namespace
 
-from aroma import main
+from aroma.aroma import aroma_workflow
 
 import pytest
 
@@ -14,20 +14,23 @@ def test_integration(skip_integration, nilearn_data):
     if skip_integration:
         pytest.skip('Skipping integration test')
 
+    # Obtain test path
     test_path, _ = split(nilearn_data.func[0])
 
+    # Create output path
     out_path = join(test_path, 'out')
 
+    # Read confounds
     confounds = pd.read_csv(nilearn_data.confounds[0], sep='\t')
 
+    # Extract motion parameters from confounds
     mc = confounds[["rot_x", "rot_y", "rot_z", "trans_x", "trans_y", "trans_z"]]
     mc_path = join(test_path, 'mc.tsv')
     mc.to_csv(mc_path, sep='\t', index=False, header=None)
 
-    args = Namespace(TR=2, affmat='', denType='nonaggr', dim=0, generate_plots=False, inFeat=None, inFile=nilearn_data.func[0], mask='',
-                     mc=mc_path, melDir='', outDir=out_path, overwrite=True, warp='')
-
-    main.main(args)
+    # Run AROMA
+    aroma_workflow(TR=2, affmat='', denType='nonaggr', dim=0, generate_plots=False, inFeat=None, inFile=nilearn_data.func[0],
+                   mask='', mc=mc_path, melDir='', outDir=out_path, overwrite=True, warp='')
 
     # Make sure files are generated
     assert isfile(join(out_path, 'classification_overview.txt'))
