@@ -303,10 +303,12 @@ def feature_frequency(melFTmix, TR):
     import numpy as np
 
     # Determine sample frequency
-    Fs = old_div(1, TR)
+    # Fs = old_div(1, TR)
+    Fs = 1 / TR
 
     # Determine Nyquist-frequency
-    Ny = old_div(Fs, 2)
+    # Ny = old_div(Fs, 2)
+    Ny = Fs / 2
 
     # Load melodic_FTmix file
     FT = np.loadtxt(melFTmix)
@@ -323,7 +325,8 @@ def feature_frequency(melFTmix, TR):
     f_norm = old_div((f - 0.01), (Ny - 0.01))
 
     # For every IC; get the cumulative sum as a fraction of the total sum
-    fcumsum_fract = old_div(np.cumsum(FT, axis=0), np.sum(FT, axis=0))
+    # fcumsum_fract = old_div(np.cumsum(FT, axis=0), np.sum(FT, axis=0))
+    fcumsum_fract = np.cumsum(FT, axis=0) / np.sum(FT, axis=0)
 
     # Determine the index of the frequency with the fractional cumulative sum closest to 0.5
     idx_cutoff = np.argmin(np.abs(fcumsum_fract - 0.5), axis=0)
@@ -396,13 +399,13 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
         # Get sum of Z-values of the voxels located within the CSF (calculate via the mean and number of non-zero voxels)
         csfVox = int(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                     tempIC,
-                                                    '-k mask_csf.nii.gz',
+                                                    '-k ../masks/mask_csf.nii.gz',
                                                     '-V | awk \'{print $1}\''])))
 
         if not (csfVox == 0):
             csfMean = float(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                            tempIC,
-                                                           '-k mask_csf.nii.gz',
+                                                           '-k ../masks/mask_csf.nii.gz',
                                                            '-M'])))
         else:
             csfMean = 0
@@ -412,12 +415,12 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
         # Get sum of Z-values of the voxels located within the Edge (calculate via the mean and number of non-zero voxels)
         edgeVox = int(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                      tempIC,
-                                                     '-k mask_edge.nii.gz',
+                                                     '-k ../masks/mask_edge.nii.gz',
                                                      '-V | awk \'{print $1}\''])))
         if not (edgeVox == 0):
             edgeMean = float(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                             tempIC,
-                                                            '-k mask_edge.nii.gz',
+                                                            '-k ../masks/mask_edge.nii.gz',
                                                             '-M'])))
         else:
             edgeMean = 0
@@ -427,12 +430,12 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
         # Get sum of Z-values of the voxels located outside the brain (calculate via the mean and number of non-zero voxels)
         outVox = int(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                     tempIC,
-                                                    '-k mask_out.nii.gz',
+                                                    '-k ../masks/mask_out.nii.gz',
                                                     '-V | awk \'{print $1}\''])))
         if not (outVox == 0):
             outMean = float(subprocess.getoutput(' '.join([os.path.join(fslDir, 'fslstats'),
                                                            tempIC,
-                                                           '-k mask_out.nii.gz',
+                                                           '-k ../masks/mask_out.nii.gz',
                                                            '-M'])))
         else:
             outMean = 0

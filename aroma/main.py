@@ -4,10 +4,11 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 import os
+import os.path as op
 import argparse
 import subprocess
 import shutil
-import utils as aromafunc
+from . import utils as aromafunc
 
 
 def _get_parser():
@@ -49,6 +50,12 @@ def _get_parser():
 
 
 def main(args):
+
+    # Change to script directory
+    cwd = op.realpath(op.curdir)
+    scriptDir = op.dirname(op.abspath(__file__))
+    os.chdir(scriptDir)
+
     print('\n------------------------------- RUNNING ICA-AROMA ------------------------------- ')
     print('--------------- \'ICA-based Automatic Removal Of Motion Artifacts\' --------------- \n')
 
@@ -245,7 +252,7 @@ def _main(argv=None):
     cwd = os.path.realpath(os.path.curdir)
     scriptDir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(scriptDir)
-
+    breakpoint()
     options = _get_parser().parse_args(argv)
     main(options)
 
