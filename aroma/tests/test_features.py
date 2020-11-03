@@ -4,7 +4,7 @@ import pandas as pd
 
 import pytest
 
-from aroma import features
+from aroma import features, utils
 
 def test_feature_time_series(nilearn_data):
 
@@ -20,7 +20,7 @@ def test_feature_time_series(nilearn_data):
     mc.to_csv(mc_path, sep='\t', index=False, header=None)
 
     # Get path to melmix file
-    cwd = op.realpath(op.curdir)
+    cwd = utils.get_resource_path()
     melmix = op.join(cwd, 'aroma', 'resources', 'melodic_mix')
 
     # Run feature_time_series
@@ -35,7 +35,7 @@ def test_feature_time_series(nilearn_data):
 def test_feature_frequency(nilearn_data):
 
     # Get path to melmix file
-    cwd = op.realpath(op.curdir)
+    cwd = utils.get_resource_path()
     melTmix = op.join(cwd, 'aroma', 'resources', 'melodic_FTmix')
 
     HFC = features.feature_frequency(melTmix, TR=2)
