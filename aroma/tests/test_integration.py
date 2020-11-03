@@ -3,7 +3,7 @@ import pandas as pd
 from os.path import join, split, isfile
 
 from aroma.aroma import aroma_workflow
-from aroma.utils import get_resource_path
+from aroma.tests.utils import get_tests_resource_path
 
 import pytest
 
@@ -12,7 +12,7 @@ def test_integration(skip_integration, nilearn_data):
     if skip_integration:
         pytest.skip('Skipping integration test')
 
-    cwd = get_resource_path()
+    cwd = get_tests_resource_path()
     resources_path = join(cwd, 'aroma', 'resources')
 
     # Obtain test path
