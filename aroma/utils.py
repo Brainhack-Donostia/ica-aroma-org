@@ -22,9 +22,9 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
         should be run
     outDir : str
         Full path of the output directory
-    melDirIn : str
+    melDirIn : str or None
         Full path of the MELODIC directory in case it has been run
-        before, otherwise define empty string
+        before, otherwise None.
     mask : str
         Full path of the mask to be applied during MELODIC
     dim : int
@@ -48,9 +48,9 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
     # When a MELODIC directory is specified,
     # check whether all needed files are present.
     # Otherwise... run MELODIC again
-    if (op.isfile(op.join(melDirIn, 'melodic_IC.nii.gz')) and
-            op.isfile(op.join(melDirIn, 'melodic_FTmix')) and
-            op.isfile(op.join(melDirIn, 'melodic_mix'))):
+    if (melDirIn and op.isfile(op.join(melDirIn, 'melodic_IC.nii.gz'))
+            and op.isfile(op.join(melDirIn, 'melodic_FTmix'))
+            and op.isfile(op.join(melDirIn, 'melodic_mix'))):
         print('  - The existing/specified MELODIC directory will be used.')
 
         # If a 'stats' directory is present (contains thresholded spatial maps)
@@ -87,11 +87,11 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
         if melDirIn:
             if not op.isdir(melDirIn):
                 print('  - The specified MELODIC directory does not exist. '
-                      'MELODIC will be run seperately.')
+                      'MELODIC will be run separately.')
             else:
                 print('  - The specified MELODIC directory does not contain '
                       'the required files to run ICA-AROMA. MELODIC will be '
-                      'run seperately.')
+                      'run separately.')
 
         # Run MELODIC
         melodic_command = ("{0} --in={1} --outdir={2} --mask={3} --dim={4} "
@@ -203,7 +203,7 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
     # If the no affmat- or warp-file has been specified, assume that the data
     # is already in MNI152 space. In that case only check if resampling to
     # 2mm is needed
-    if affmat and warp:
+    if not affmat and not warp:
         in_img = nib.load(inFile)
         # Get 3D voxel size
         pixdim1, pixdim2, pixdim3 = in_img.header.get_zooms()[:3]
@@ -222,7 +222,7 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
     # If only a warp-file has been specified, assume that the data has already
     # been registered to the structural scan. In that case apply the warping
     # without a affmat
-    elif affmat and warp:
+    elif not affmat and warp:
         # Apply warp
         os.system(' '.join([op.join(fslDir, 'applywarp'),
                             '--ref=' + ref,
@@ -233,7 +233,7 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
 
     # If only a affmat-file has been specified perform affine registration to
     # MNI
-    elif affmat and warp:
+    elif affmat and not warp:
         os.system(' '.join([op.join(fslDir, 'flirt'),
                             '-ref ' + ref,
                             '-in ' + inFile,
