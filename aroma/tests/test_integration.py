@@ -1,9 +1,6 @@
 import numpy as np
-import os
 import pandas as pd
-import subprocess
 from os.path import join, split, isfile
-from argparse import Namespace
 
 from aroma.aroma import aroma_workflow
 from aroma.utils import get_resource_path
@@ -32,9 +29,13 @@ def test_integration(skip_integration, nilearn_data):
     mc_path = join(test_path, 'mc.tsv')
     mc.to_csv(mc_path, sep='\t', index=False, header=None)
 
-    # Run AROMA
-    aroma_workflow(TR=2, affmat='', denType='nonaggr', dim=0, generate_plots=False, inFeat=None, inFile=nilearn_data.func[0],
-                   mask='', mc=mc_path, melDir='', outDir=out_path, overwrite=True, warp='')
+    aroma_workflow(
+        TR=2, affmat=None, denType='nonaggr',
+        dim=0, generate_plots=False, inFeat=None,
+        inFile=nilearn_data.func[0], mask=None,
+        mc=mc_path, melDir=None, outDir=out_path,
+        overwrite=True, warp=None
+    )
 
     # Make sure files are generated
     assert isfile(join(out_path, 'classification_overview.txt'))

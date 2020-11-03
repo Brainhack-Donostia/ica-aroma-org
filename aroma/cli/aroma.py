@@ -2,6 +2,7 @@
 import argparse
 
 from aroma import aroma
+from aroma.cli.parser_utils import is_valid_file, is_valid_path
 
 
 def _get_parser():
@@ -37,26 +38,28 @@ def _get_parser():
         "-i",
         "-in",
         dest="inFile",
+        type=lambda x: is_valid_file(parser, x),
         required=False,
         help="Input file name of fMRI data (.nii.gz)",
     )
     nonfeatoptions.add_argument(
         "-mc",
         dest="mc",
+        type=lambda x: is_valid_file(parser, x),
         required=False,
         help=(
             "File name of the motion parameters obtained after motion "
-            "realignment (e.g., FSL mcflirt). Note that the order of "
+            "realignment (e.g., FSL MCFLIRT). Note that the order of "
             "parameters does not matter, should your file not originate "
-            "from FSL mcflirt. (e.g., "
-            "/home/user/PROJECT/SUBJECT.feat/mc/prefiltered_func_data_mcf.par"
+            "from FSL MCFLIRT."
         ),
     )
     nonfeatoptions.add_argument(
         "-a",
         "-affmat",
         dest="affmat",
-        default="",
+        type=lambda x: is_valid_file(parser, x),
+        default=None,
         help=(
             "File name of the mat-file describing the affine registration "
             "(e.g., FSL FLIRT) of the functional data to structural space "
@@ -68,7 +71,8 @@ def _get_parser():
         "-w",
         "-warp",
         dest="warp",
-        default="",
+        type=lambda x: is_valid_file(parser, x),
+        default=None,
         help=(
             "File name of the warp-file describing the non-linear "
             "registration (e.g., FSL FNIRT) of the structural data to MNI152 "
@@ -80,7 +84,8 @@ def _get_parser():
         "-m",
         "-mask",
         dest="mask",
-        default="",
+        type=lambda x: is_valid_file(parser, x),
+        default=None,
         help=(
             "File name of the mask to be used for MELODIC (denoising will be "
             "performed on the original/non-masked input data)"
@@ -94,6 +99,7 @@ def _get_parser():
         "-feat",
         dest="inFeat",
         required=False,
+        type=lambda x: is_valid_path(parser, x),
         help=(
             "Feat directory name (Feat should have been run without temporal "
             "filtering and including registration to MNI152)"
@@ -107,6 +113,7 @@ def _get_parser():
         "-den",
         dest="denType",
         default="nonaggr",
+        choices=["nonaggr", "aggr", "both", "no"],
         help=(
             "Type of denoising strategy: 'no': only classification, no "
             "denoising; 'nonaggr': non-aggresssive denoising (default); "
@@ -118,6 +125,7 @@ def _get_parser():
         "-md",
         "-meldir",
         dest="melDir",
+        type=lambda x: is_valid_path(parser, x),
         default="",
         help=(
             "MELODIC directory name, in case MELODIC has been run previously."
