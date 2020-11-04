@@ -12,8 +12,7 @@ def test_integration(skip_integration, nilearn_data):
     if skip_integration:
         pytest.skip('Skipping integration test')
 
-    cwd = get_tests_resource_path()
-    resources_path = join(cwd, 'aroma', 'resources')
+    resources_path = get_tests_resource_path()
 
     # Obtain test path
     test_path, _ = split(nilearn_data.func[0])
