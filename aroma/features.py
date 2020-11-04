@@ -129,7 +129,7 @@ def feature_frequency(melFTmix, TR):
 
     # Load melodic_FTmix file
     FT = np.loadtxt(melFTmix)
-    n_frequencies, _ = FT.shape
+    n_frequencies = FT.shape[0]
 
     # Determine which frequencies are associated with every row in the
     # melodic_FTmix file (assuming the rows range from 0Hz to Nyquist)
@@ -224,7 +224,7 @@ def feature_spatial(melIC):
         outSum = np.sum(out_data)
 
         # Determine edge and CSF fraction
-        if not (totSum == 0):
+        if totSum != 0:
             edgeFract[i] = (outSum + edgeSum) / (totSum - csfSum)
             csfFract[i] = csfSum / totSum
         else:
