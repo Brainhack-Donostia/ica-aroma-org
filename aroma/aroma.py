@@ -29,11 +29,6 @@ def aroma_workflow(
     ----------
     inFeat
     """
-    # Change to script directory
-    cwd = op.realpath(op.curdir)
-    scriptDir = op.dirname(op.abspath(__file__))
-    os.chdir(scriptDir)
-
     print("\n------------------------ RUNNING ICA-AROMA ------------------------")
     print("-------- 'ICA-based Automatic Removal Of Motion Artifacts' --------\n")
 
@@ -209,8 +204,5 @@ def aroma_workflow(
     if denType != "no":
         print("Step 3) Data denoising")
         utils.denoising(fslDir, inFile, outDir, melmix, denType, motionICs)
-
-    # Revert to old directory
-    os.chdir(cwd)
 
     print("Finished")
