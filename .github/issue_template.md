@@ -1,5 +1,5 @@
 <!--
-This is a suggested issue template for tedana.
+This is a suggested issue template for ICA-AROMA.
 -->
 
 <!--
