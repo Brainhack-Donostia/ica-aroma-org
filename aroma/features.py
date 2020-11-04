@@ -1,6 +1,4 @@
-"""
-Functions to calculate ICA-AROMA features for component classification.
-"""
+"""Functions to calculate ICA-AROMA features for component classification."""
 import os
 
 import nibabel as nib
@@ -11,8 +9,7 @@ from .utils import cross_correlation, get_resource_path
 
 
 def feature_time_series(melmix, mc):
-    """Extract maximum motion parameter correlation feature scores from
-    component time series.
+    """Extract maximum motion parameter correlation scores from components.
 
     This function determines the maximum robust correlation of each component
     time series with a model of 72 realignment parameters.

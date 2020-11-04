@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+"""The core workflow for AROMA."""
 import os
 import os.path as op
 import shutil

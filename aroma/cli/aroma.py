@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Parser for AROMA workflow."""
 import argparse
 
 from aroma import aroma
@@ -7,7 +8,7 @@ from aroma.cli.parser_utils import is_valid_file, is_valid_path
 
 def _get_parser():
     """
-    Parses command line inputs for ica-aroma-org
+    Parse command line inputs for aroma.
 
     Returns
     -------
@@ -165,7 +166,7 @@ def _get_parser():
 
 
 def _main(argv=None):
-    """Entry point"""
+    """Entry point for aroma CLI."""
     options = _get_parser().parse_args(argv)
     kwargs = vars(options)
     aroma.aroma_workflow(**kwargs)
