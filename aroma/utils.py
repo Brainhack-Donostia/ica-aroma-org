@@ -1,5 +1,4 @@
-"""Utility functions for ICA-AROMA.
-"""
+"""Utility functions for ICA-AROMA."""
 import os
 import os.path as op
 import subprocess
@@ -10,8 +9,7 @@ import numpy as np
 
 
 def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
-    """Run MELODIC and merge the mixture modeled thresholded
-    ICs into a single 4D nifti file.
+    """Run MELODIC and merge the thresholded ICs into a single 4D nifti file.
 
     Parameters
     ----------
@@ -276,9 +274,10 @@ def cross_correlation(a, b):
 
 
 def classification(outDir, maxRPcorr, edgeFract, HFC, csfFract):
-    """Classify a set of components as motion or non-motion based on four
-    features; maximum RP correlation, high-frequency content, edge-fraction
-    and CSF-fraction.
+    """Classify components as motion or non-motion based on four features.
+
+    The four features used for classification are: maximum RP correlation,
+    high-frequency content, edge-fraction, and CSF-fraction.
 
     Parameters
     ----------
@@ -320,9 +319,9 @@ def classification(outDir, maxRPcorr, edgeFract, HFC, csfFract):
     motionICs = np.squeeze(
         np.array(
             np.where(
-                (proj > 0) +
-                (csfFract > thr_csf) +
-                (HFC > thr_HFC)
+                (proj > 0)
+                + (csfFract > thr_csf)
+                + (HFC > thr_HFC)
             )
         )
     )
@@ -365,8 +364,7 @@ def classification(outDir, maxRPcorr, edgeFract, HFC, csfFract):
 
 
 def denoising(fslDir, inFile, outDir, melmix, denType, denIdx):
-    """Classify the ICs based on the four features: maximum RP correlation,
-    high-frequency content, edge-fraction and CSF-fraction.
+    """Remove noise components from fMRI data.
 
     Parameters
     ----------
@@ -446,9 +444,15 @@ def denoising(fslDir, inFile, outDir, melmix, denType, denIdx):
 
 
 def get_resource_path():
-    """
-    Returns the path to general resources, terminated with separator. Resources
-    are kept outside package folder in "datasets".
+    """Return the path to general resources.
+
+    Returns the path to general resources, terminated with separator.
+    Resources are kept outside package folder in "resources".
     Based on function by Yaroslav Halchenko used in Neurosynth Python package.
+
+    Returns
+    -------
+    resource_path : str
+        Absolute path to resources folder.
     """
     return op.abspath(op.join(op.dirname(__file__), "resources") + op.sep)

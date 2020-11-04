@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Parser for classification plot-generation workflow."""
 import argparse
 
 from aroma import plotting
@@ -36,7 +37,7 @@ def _get_parser():
 
 
 def _main(argv=None):
-    """Entry point"""
+    """Entry point for classification_plot CLI."""
     options = _get_parser().parse_args(argv)
     if options.plottype == 'assessment':
         plotting.classification_plot(options.myinput, options.outDir)

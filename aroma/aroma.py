@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+"""The core workflow for AROMA."""
 import os
 import os.path as op
 import shutil
@@ -56,7 +56,7 @@ def aroma_workflow(
 
         if not op.isfile(mc):
             raise Exception(
-                "Missing mc/prefiltered_func_data_mcf.mat in Feat " "directory."
+                "Missing mc/prefiltered_func_data_mcf.mat in Feat directory."
             )
 
         if not op.isfile(affmat):
@@ -64,7 +64,7 @@ def aroma_workflow(
 
         if not op.isfile(warp):
             raise Exception(
-                "Missing reg/highres2standard_warp.nii.gz in Feat " "directory."
+                "Missing reg/highres2standard_warp.nii.gz in Feat directory."
             )
 
         # Check whether a melodic.ica directory exists

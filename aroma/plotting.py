@@ -1,5 +1,4 @@
-"""Plotting functions for ICA-AROMA
-"""
+"""Plotting functions for ICA-AROMA."""
 import os
 import glob
 
