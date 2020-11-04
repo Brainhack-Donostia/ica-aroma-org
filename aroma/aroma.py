@@ -186,7 +186,7 @@ def aroma_workflow(
     utils.register2MNI(fslDir, melIC, melIC_MNI, affmat, warp)
 
     print("  - extracting the CSF & Edge fraction features")
-    edgeFract, csfFract = features.feature_spatial(fslDir, outDir, scriptDir, melIC_MNI)
+    edgeFract, csfFract = features.feature_spatial(melIC_MNI)
 
     print("  - extracting the Maximum RP correlation feature")
     melmix = op.join(outDir, "melodic.ica", "melodic_mix")

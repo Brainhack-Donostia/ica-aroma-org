@@ -20,15 +20,19 @@ def feature_time_series(melmix, mc):
     Parameters
     ----------
     melmix : str
-        Full path of the melodic_mix text file
+        Full path of the melodic_mix text file.
+        Stored array is (time x component).
     mc : str
-        Full path of the text file containing the realignment parameters
+        Full path of the text file containing the realignment parameters.
+        Motion parameters are (time x 6), with the first three columns being
+        rotation parameters (in radians) and the final three being translation
+        parameters (in mm).
 
     Returns
     -------
     maxRPcorr : array_like
         Array of the maximum RP correlation feature scores for the components
-        of the melodic_mix file
+        of the melodic_mix file.
     """
     # Read melodic mix file (IC time-series), subsequently define a set of
     # squared time-series
@@ -105,7 +109,9 @@ def feature_frequency(melFTmix, TR):
     Parameters
     ----------
     melFTmix : str
-        Full path of the melodic_FTmix text file
+        Full path of the melodic_FTmix text file.
+        Stored array is (frequency x component), with frequencies
+        ranging from 0 Hz to Nyquist frequency.
     TR : float
         TR (in seconds) of the fMRI data
 
@@ -123,10 +129,11 @@ def feature_frequency(melFTmix, TR):
 
     # Load melodic_FTmix file
     FT = np.loadtxt(melFTmix)
+    n_frequencies = FT.shape[0]
 
     # Determine which frequencies are associated with every row in the
-    # melodic_FTmix file  (assuming the rows range from 0Hz to Nyquist)
-    f = Ny * (np.array(list(range(1, FT.shape[0] + 1)))) / (FT.shape[0])
+    # melodic_FTmix file (assuming the rows range from 0Hz to Nyquist)
+    f = Ny * np.arange(1, n_frequencies + 1) / n_frequencies
 
     # Only include frequencies higher than 0.01Hz
     fincl = np.squeeze(np.array(np.where(f > 0.01)))
@@ -151,7 +158,7 @@ def feature_frequency(melFTmix, TR):
     return HFC
 
 
-def feature_spatial(fslDir, tempDir, aromaDir, melIC):
+def feature_spatial(melIC):
     """Extract the spatial feature scores.
 
     For each IC it determines the fraction of the mixture modeled thresholded
@@ -160,17 +167,9 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
 
     Parameters
     ----------
-    fslDir : str
-        Full path of the bin-directory of FSL
-    tempDir : str
-        Full path of a directory where temporary files can be stored
-        (called 'temp_IC.nii.gz')
-    aromaDir : str
-        Full path of the ICA-AROMA directory, containing the mask-files
-        (mask_edge.nii.gz, mask_csf.nii.gz & mask_out.nii.gz)
     melIC : str
-        Full path of the nii.gz file containing mixture-modeled threholded
-        (p>0.5) Z-maps, registered to the MNI152 2mm template
+        Full path of the nii.gz file containing mixture-modeled thresholded
+        (p<0.5) Z-maps, registered to the MNI152 2mm template
 
     Returns
     -------
@@ -185,6 +184,11 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
     melIC_img = nib.load(melIC)
     numICs = melIC_img.shape[3]
 
+    masks_dir = get_resource_path()
+    csf_mask = os.path.join(masks_dir, "mask_csf.nii.gz")
+    edge_mask = os.path.join(masks_dir, "mask_edge.nii.gz")
+    out_mask = os.path.join(masks_dir, "mask_out.nii.gz")
+
     # Loop over ICs
     edgeFract = np.zeros(numICs)
     csfFract = np.zeros(numICs)
@@ -198,58 +202,29 @@ def feature_spatial(fslDir, tempDir, aromaDir, melIC):
         # Get sum of Z-values within the total Z-map (calculate via the mean
         # and number of non-zero voxels)
         tempICdata = tempIC.get_fdata()
-        totVox = np.sum(tempICdata != 0)  # number of nonzero voxels in image
+        totSum = np.sum(tempICdata)
 
-        if totVox != 0:
-            totMean = np.mean(tempICdata[tempICdata != 0])
-        else:
+        if totSum == 0:
             print("\t- The spatial map of component {} is empty. "
-                  "Please check!".format(i+1))
-            totMean = 0
-
-        totSum = totMean * totVox
+                  "Please check!".format(i + 1))
 
         # Get sum of Z-values of the voxels located within the CSF
         # (calculate via the mean and number of non-zero voxels)
-        csf_mask = os.path.join(get_resource_path(), "mask_csf.nii.gz")
         csf_data = masking.apply_mask(tempIC, csf_mask)
-        csfVox = np.sum(csf_data != 0)  # number of nonzero voxels in mask
-
-        if not (csfVox == 0):
-            csfMean = np.mean(csf_data[csf_data != 0])
-        else:
-            csfMean = 0
-
-        csfSum = csfMean * csfVox
+        csfSum = np.sum(csf_data)
 
         # Get sum of Z-values of the voxels located within the Edge
         # (calculate via the mean and number of non-zero voxels)
-        edge_mask = os.path.join(get_resource_path(), "mask_edge.nii.gz")
         edge_data = masking.apply_mask(tempIC, edge_mask)
-        edgeVox = np.sum(edge_data != 0)  # number of nonzero voxels in mask
-
-        if not (edgeVox == 0):
-            edgeMean = np.mean(edge_data[edge_data != 0])
-        else:
-            edgeMean = 0
-
-        edgeSum = edgeMean * edgeVox
+        edgeSum = np.sum(edge_data)
 
         # Get sum of Z-values of the voxels located outside the brain
         # (calculate via the mean and number of non-zero voxels)
-        out_mask = os.path.join(get_resource_path(), "mask_out.nii.gz")
         out_data = masking.apply_mask(tempIC, out_mask)
-        outVox = np.sum(out_data != 0)  # number of nonzero voxels in mask
-
-        if not (outVox == 0):
-            outMean = np.mean(out_data[out_data != 0])
-        else:
-            outMean = 0
-
-        outSum = outMean * outVox
+        outSum = np.sum(out_data)
 
         # Determine edge and CSF fraction
-        if not (totSum == 0):
+        if totSum != 0:
             edgeFract[i] = (outSum + edgeSum) / (totSum - csfSum)
             csfFract[i] = csfSum / totSum
         else:
