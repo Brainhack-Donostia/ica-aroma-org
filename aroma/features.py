@@ -48,10 +48,6 @@ def feature_time_series(mel_mix, mc):
     # Create an RP-model including the RPs and its derivatives
     rp12 = np.hstack((rp6, rp6_der))
 
-    # Add the squared RP-terms to the model
-    # NOTE: The above comment existed, but this step was **missing**!!
-    rp24 = np.hstack((rp12, rp12 ** 2))
-
     # add the fw and bw shifted versions
     rp12_1fw = np.vstack((
         np.zeros(2 * nparams),
@@ -61,7 +57,7 @@ def feature_time_series(mel_mix, mc):
         rp12[1:],
         np.zeros(2 * nparams)
     ))
-    rp_model = np.hstack((rp24, rp12_1fw, rp12_1bw))
+    rp_model = np.hstack((rp12, rp12_1fw, rp12_1bw))
 
     # Determine the maximum correlation between RPs and IC time-series
     nsplits = 1000
