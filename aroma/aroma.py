@@ -4,6 +4,7 @@ import os.path as op
 import shutil
 
 import nibabel as nib
+from nilearn import masking
 
 from . import utils, features
 
@@ -157,15 +158,8 @@ def aroma_workflow(
     elif in_feat and op.isfile(op.join(in_feat, "example_func.nii.gz")):
         # If a Feat directory is specified, and an example_func is present use
         # example_func to create a mask
-        bet_command = "{0} {1} {2} -f 0.3 -n -m -R".format(
-            op.join(fsl_dir, "bet"),
-            op.join(in_feat, "example_func.nii.gz"),
-            op.join(out_dir, "bet"),
-        )
-        os.system(bet_command)
-        os.rename(op.join(out_dir, "bet_mask.nii.gz"), new_mask)
-        if op.isfile(op.join(out_dir, "bet.nii.gz")):
-            os.remove(op.join(out_dir, "bet.nii.gz"))
+        mask = masking.compute_epi_mask(op.join(in_feat, "example_func.nii.gz"))
+        mask.to_filename(new_mask)
     else:
         if in_feat:
             print(
@@ -173,10 +167,8 @@ def aroma_workflow(
                 "A mask will be created including all voxels with varying "
                 "intensity over time in the fMRI data. Please check!\n"
             )
-        math_command = "{0} {1} -Tstd -bin {2}".format(
-            op.join(fsl_dir, "fslmaths"), in_file, new_mask
-        )
-        os.system(math_command)
+        mask = masking.compute_epi_mask(in_file)
+        mask.to_filename(new_mask)
 
     # Run ICA-AROMA
     print("Step 1) MELODIC")
