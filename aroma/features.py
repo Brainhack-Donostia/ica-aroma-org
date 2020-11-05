@@ -8,7 +8,7 @@ from nilearn import image, masking
 from .utils import cross_correlation, get_resource_path
 
 
-def feature_time_series(melmix, mc):
+def feature_time_series(mel_mix, mc):
     """Extract maximum motion parameter correlation scores from components.
 
     This function determines the maximum robust correlation of each component
@@ -16,7 +16,7 @@ def feature_time_series(melmix, mc):
 
     Parameters
     ----------
-    melmix : str
+    mel_mix : str
         Full path of the melodic_mix text file.
         Stored array is (time x component).
     mc : str
@@ -27,13 +27,13 @@ def feature_time_series(melmix, mc):
 
     Returns
     -------
-    maxRPcorr : array_like
+    max_RP_corr : array_like
         Array of the maximum RP correlation feature scores for the components
         of the melodic_mix file.
     """
     # Read melodic mix file (IC time-series), subsequently define a set of
     # squared time-series
-    mix = np.loadtxt(melmix)
+    mix = np.loadtxt(mel_mix)
 
     # Read motion parameter file
     rp6 = np.loadtxt(mc)
@@ -48,6 +48,10 @@ def feature_time_series(melmix, mc):
     # Create an RP-model including the RPs and its derivatives
     rp12 = np.hstack((rp6, rp6_der))
 
+    # Add the squared RP-terms to the model
+    # NOTE: The above comment existed, but this step was **missing**!!
+    rp24 = np.hstack((rp12, rp12 ** 2))
+
     # add the fw and bw shifted versions
     rp12_1fw = np.vstack((
         np.zeros(2 * nparams),
@@ -57,7 +61,7 @@ def feature_time_series(melmix, mc):
         rp12[1:],
         np.zeros(2 * nparams)
     ))
-    rp_model = np.hstack((rp12, rp12_1fw, rp12_1bw))
+    rp_model = np.hstack((rp24, rp12_1fw, rp12_1bw))
 
     # Determine the maximum correlation between RPs and IC time-series
     nsplits = 1000
@@ -88,11 +92,11 @@ def feature_time_series(melmix, mc):
     # Feature score is the mean of the maximum correlation over all the random
     # splits
     # Avoid propagating occasional nans that arise in artificial test cases
-    maxRPcorr = np.nanmean(max_correls, axis=0)
-    return maxRPcorr
+    max_RP_corr = np.nanmean(max_correls, axis=0)
+    return max_RP_corr
 
 
-def feature_frequency(melFTmix, TR):
+def feature_frequency(mel_FT_mix, TR):
     """Extract the high-frequency content feature scores.
 
     This function determines the frequency, as fraction of the Nyquist
@@ -101,7 +105,7 @@ def feature_frequency(melFTmix, TR):
 
     Parameters
     ----------
-    melFTmix : str
+    mel_FT_mix : str
         Full path of the melodic_FTmix text file.
         Stored array is (frequency x component), with frequencies
         ranging from 0 Hz to Nyquist frequency.
@@ -121,7 +125,7 @@ def feature_frequency(melFTmix, TR):
     Ny = Fs / 2
 
     # Load melodic_FTmix file
-    FT = np.loadtxt(melFTmix)
+    FT = np.loadtxt(mel_FT_mix)
     n_frequencies = FT.shape[0]
 
     # Determine which frequencies are associated with every row in the
@@ -151,7 +155,7 @@ def feature_frequency(melFTmix, TR):
     return HFC
 
 
-def feature_spatial(melIC):
+def feature_spatial(mel_IC):
     """Extract the spatial feature scores.
 
     For each IC it determines the fraction of the mixture modeled thresholded
@@ -160,22 +164,22 @@ def feature_spatial(melIC):
 
     Parameters
     ----------
-    melIC : str
+    mel_IC : str
         Full path of the nii.gz file containing mixture-modeled thresholded
         (p<0.5) Z-maps, registered to the MNI152 2mm template
 
     Returns
     -------
-    edgeFract : array_like
+    edge_fract : array_like
         Array of the edge fraction feature scores for the components of the
-        melIC file
-    csfFract : array_like
+        mel_IC file
+    csf_fract : array_like
         Array of the CSF fraction feature scores for the components of the
-        melIC file
+        mel_IC file
     """
     # Get the number of ICs
-    melIC_img = nib.load(melIC)
-    numICs = melIC_img.shape[3]
+    mel_IC_img = nib.load(mel_IC)
+    num_ICs = mel_IC_img.shape[3]
 
     masks_dir = get_resource_path()
     csf_mask = os.path.join(masks_dir, "mask_csf.nii.gz")
@@ -183,46 +187,46 @@ def feature_spatial(melIC):
     out_mask = os.path.join(masks_dir, "mask_out.nii.gz")
 
     # Loop over ICs
-    edgeFract = np.zeros(numICs)
-    csfFract = np.zeros(numICs)
-    for i in range(numICs):
+    edge_fract = np.zeros(num_ICs)
+    csf_fract = np.zeros(num_ICs)
+    for i in range(num_ICs):
         # Extract IC from the merged melodic_IC_thr2MNI2mm file
-        tempIC = image.index_img(melIC, i)
+        temp_IC = image.index_img(mel_IC, i)
 
         # Change to absolute Z-values
-        tempIC = image.math_img("np.abs(img)", img=tempIC)
+        temp_IC = image.math_img("np.abs(img)", img=temp_IC)
 
         # Get sum of Z-values within the total Z-map (calculate via the mean
         # and number of non-zero voxels)
-        tempICdata = tempIC.get_fdata()
-        totSum = np.sum(tempICdata)
+        temp_IC_data = temp_IC.get_fdata()
+        tot_sum = np.sum(temp_IC_data)
 
-        if totSum == 0:
+        if tot_sum == 0:
             print("\t- The spatial map of component {} is empty. "
                   "Please check!".format(i + 1))
 
         # Get sum of Z-values of the voxels located within the CSF
         # (calculate via the mean and number of non-zero voxels)
-        csf_data = masking.apply_mask(tempIC, csf_mask)
-        csfSum = np.sum(csf_data)
+        csf_data = masking.apply_mask(temp_IC, csf_mask)
+        csf_sum = np.sum(csf_data)
 
         # Get sum of Z-values of the voxels located within the Edge
         # (calculate via the mean and number of non-zero voxels)
-        edge_data = masking.apply_mask(tempIC, edge_mask)
-        edgeSum = np.sum(edge_data)
+        edge_data = masking.apply_mask(temp_IC, edge_mask)
+        edge_sum = np.sum(edge_data)
 
         # Get sum of Z-values of the voxels located outside the brain
         # (calculate via the mean and number of non-zero voxels)
-        out_data = masking.apply_mask(tempIC, out_mask)
-        outSum = np.sum(out_data)
+        out_data = masking.apply_mask(temp_IC, out_mask)
+        out_sum = np.sum(out_data)
 
         # Determine edge and CSF fraction
-        if totSum != 0:
-            edgeFract[i] = (outSum + edgeSum) / (totSum - csfSum)
-            csfFract[i] = csfSum / totSum
+        if tot_sum != 0:
+            edge_fract[i] = (out_sum + edge_sum) / (tot_sum - csf_sum)
+            csf_fract[i] = csf_sum / tot_sum
         else:
-            edgeFract[i] = 0
-            csfFract[i] = 0
+            edge_fract[i] = 0
+            csf_fract[i] = 0
 
     # Return feature scores
-    return edgeFract, csfFract
+    return edge_fract, csf_fract
