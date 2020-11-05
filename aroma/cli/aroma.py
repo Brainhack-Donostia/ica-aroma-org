@@ -26,7 +26,7 @@ def _get_parser():
     reqoptions = parser.add_argument_group("Required arguments")
     reqoptions.add_argument(
         "-o", "-out",
-        dest="outDir",
+        dest="out_dir",
         required=True,
         help="Output directory name"
     )
@@ -35,7 +35,7 @@ def _get_parser():
     inputs.add_argument(
         "-i",
         "-in",
-        dest="inFile",
+        dest="in_file",
         type=lambda x: is_valid_file(parser, x),
         required=False,
         help="Input file name of fMRI data (.nii.gz)",
@@ -43,7 +43,7 @@ def _get_parser():
     inputs.add_argument(
         "-f",
         "-feat",
-        dest="inFeat",
+        dest="in_feat",
         required=False,
         type=lambda x: is_valid_path(parser, x),
         help=(
@@ -115,7 +115,7 @@ def _get_parser():
     optoptions.add_argument("-tr", dest="TR", help="TR in seconds", type=float)
     optoptions.add_argument(
         "-den",
-        dest="denType",
+        dest="den_type",
         default="nonaggr",
         choices=["nonaggr", "aggr", "both", "no"],
         help=(
@@ -127,8 +127,8 @@ def _get_parser():
     )
     optoptions.add_argument(
         "-md",
-        "-meldir",
-        dest="melDir",
+        "-mel_dir",
+        dest="mel_dir",
         type=lambda x: is_valid_path(parser, x),
         default="",
         help=(
