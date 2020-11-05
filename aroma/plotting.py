@@ -209,7 +209,7 @@ def classification_plot(myinput, out_dir):
     plt.suptitle('Component Assessment', fontsize=20)
 
     # outtakes
-    plt.savefig(os.path.join(outDir, 'ICA_AROMA_component_assessment.svg'),
+    plt.savefig(os.path.join(out_dir, 'ICA_AROMA_component_assessment.svg'),
                 bbox_inches='tight', dpi=300)
 
     return
