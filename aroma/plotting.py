@@ -11,13 +11,13 @@ from matplotlib import gridspec
 import seaborn as sns
 
 
-def classification_plot(myinput, outDir):
+def classification_plot(myinput, out_dir):
     """Generate a figure to show classifications.
 
     Parameters
     ----------
     myinput
-    outDir
+    out_dir
     """
     # find files
     myfiles = glob.glob(myinput)
@@ -209,7 +209,7 @@ def classification_plot(myinput, outDir):
     plt.suptitle('Component Assessment', fontsize=20)
 
     # outtakes
-    plt.savefig(os.path.join(outDir, 'ICA_AROMA_component_assessment.pdf'),
+    plt.savefig(os.path.join(out_dir, 'ICA_AROMA_component_assessment.pdf'),
                 bbox_inches='tight')
 
     return
