@@ -31,17 +31,34 @@ def _get_parser():
         help="Output directory name"
     )
 
-    # Required options in non-Feat mode
-    nonfeatoptions = parser.add_argument_group(
-        "Required arguments - generic mode"
-    )
-    nonfeatoptions.add_argument(
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument(
         "-i",
         "-in",
         dest="inFile",
         type=lambda x: is_valid_file(parser, x),
         required=False,
         help="Input file name of fMRI data (.nii.gz)",
+    )
+    inputs.add_argument(
+        "-f",
+        "-feat",
+        dest="inFeat",
+        required=False,
+        type=lambda x: is_valid_path(parser, x),
+        help=(
+            "Feat directory name (Feat should have been run without temporal "
+            "filtering and including registration to MNI152)"
+        ),
+    )
+
+    # Required options in non-Feat mode
+    nonfeatoptions = parser.add_argument_group(
+        "Required arguments - generic mode",
+        description=(
+            "These arguments should only be provided if the primary input is "
+            "an fMRI file, and not a FEAT directory."
+        )
     )
     nonfeatoptions.add_argument(
         "-mc",
@@ -90,20 +107,6 @@ def _get_parser():
         help=(
             "File name of the mask to be used for MELODIC (denoising will be "
             "performed on the original/non-masked input data)"
-        ),
-    )
-
-    # Required options in Feat mode
-    featoptions = parser.add_argument_group("Required arguments - FEAT mode")
-    featoptions.add_argument(
-        "-f",
-        "-feat",
-        dest="inFeat",
-        required=False,
-        type=lambda x: is_valid_path(parser, x),
-        help=(
-            "Feat directory name (Feat should have been run without temporal "
-            "filtering and including registration to MNI152)"
         ),
     )
 
