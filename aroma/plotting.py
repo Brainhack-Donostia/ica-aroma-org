@@ -11,13 +11,13 @@ from matplotlib import gridspec
 import seaborn as sns
 
 
-def classification_plot(myinput, outDir):
+def classification_plot(myinput, out_dir):
     """Generate a figure to show classifications.
 
     Parameters
     ----------
     myinput
-    outDir
+    out_dir
     """
     # find files
     myfiles = glob.glob(myinput)

@@ -8,19 +8,19 @@ import nibabel as nib
 import numpy as np
 
 
-def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
+def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
     """Run MELODIC and merge the thresholded ICs into a single 4D nifti file.
 
     Parameters
     ----------
-    fslDir : str
+    fsl_dir : str
         Full path of the bin-directory of FSL
-    inFile : str
+    in_file : str
         Full path to the fMRI data file (nii.gz) on which MELODIC
         should be run
-    outDir : str
+    out_dir : str
         Full path of the output directory
-    melDirIn : str or None
+    mel_dir_in : str or None
         Full path of the MELODIC directory in case it has been run
         before, otherwise None.
     mask : str
@@ -38,25 +38,25 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
                            melodic.ica/stats/
     """
     # Define the 'new' MELODIC directory and predefine some associated files
-    melDir = op.join(outDir, 'melodic.ica')
-    melIC = op.join(melDir, 'melodic_IC.nii.gz')
-    melICmix = op.join(melDir, 'melodic_mix')
-    melICthr = op.join(outDir, 'melodic_IC_thr.nii.gz')
+    mel_dir = op.join(out_dir, 'melodic.ica')
+    mel_IC = op.join(mel_dir, 'melodic_IC.nii.gz')
+    mel_IC_mix = op.join(mel_dir, 'melodic_mix')
+    mel_IC_thr = op.join(out_dir, 'melodic_IC_thr.nii.gz')
 
     # When a MELODIC directory is specified,
     # check whether all needed files are present.
     # Otherwise... run MELODIC again
-    if (melDirIn and op.isfile(op.join(melDirIn, 'melodic_IC.nii.gz'))
-            and op.isfile(op.join(melDirIn, 'melodic_FTmix'))
-            and op.isfile(op.join(melDirIn, 'melodic_mix'))):
+    if (mel_dir_in and op.isfile(op.join(mel_dir_in, 'melodic_IC.nii.gz'))
+            and op.isfile(op.join(mel_dir_in, 'melodic_FTmix'))
+            and op.isfile(op.join(mel_dir_in, 'melodic_mix'))):
         print('  - The existing/specified MELODIC directory will be used.')
 
         # If a 'stats' directory is present (contains thresholded spatial maps)
         # create a symbolic link to the MELODIC directory.
         # Otherwise create specific links and
         # run mixture modeling to obtain thresholded maps.
-        if op.isdir(op.join(melDirIn, 'stats')):
-            os.symlink(melDirIn, melDir)
+        if op.isdir(op.join(mel_dir_in, 'stats')):
+            os.symlink(mel_dir_in, mel_dir)
         else:
             print("  - The MELODIC directory does not contain the required "
                   "'stats' folder. Mixture modeling on the Z-statistical "
@@ -64,26 +64,26 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
 
             # Create symbolic links to the items in the specified melodic
             # directory
-            os.makedirs(melDir)
-            for item in os.listdir(melDirIn):
-                os.symlink(op.join(melDirIn, item),
-                           op.join(melDir, item))
+            os.makedirs(mel_dir)
+            for item in os.listdir(mel_dir_in):
+                os.symlink(op.join(mel_dir_in, item),
+                           op.join(mel_dir, item))
 
             # Run mixture modeling
-            melodic_command = ("{0} --in={1} --ICs={1} --mix={2} --outdir={3} "
+            melodic_command = ("{0} --in={1} --ICs={1} --mix={2} --out_dir={3} "
                                "--0stats --mmthresh=0.5").format(
-                                    op.join(fslDir, 'melodic'),
-                                    melIC,
-                                    melICmix,
-                                    melDir,
+                                    op.join(fsl_dir, 'melodic'),
+                                    mel_IC,
+                                    mel_IC_mix,
+                                    mel_dir,
                                )
             os.system(melodic_command)
     else:
         # If a melodic directory was specified, display that it did not
         # contain all files needed for ICA-AROMA (or that the directory
         # does not exist at all)
-        if melDirIn:
-            if not op.isdir(melDirIn):
+        if mel_dir_in:
+            if not op.isdir(mel_dir_in):
                 print('  - The specified MELODIC directory does not exist. '
                       'MELODIC will be run separately.')
             else:
@@ -92,12 +92,12 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
                       'run separately.')
 
         # Run MELODIC
-        melodic_command = ("{0} --in={1} --outdir={2} --mask={3} --dim={4} "
+        melodic_command = ("{0} --in={1} --out_dir={2} --mask={3} --dim={4} "
                            "--Ostats --nobet --mmthresh=0.5 --report "
                            "--tr={5}").format(
-                               op.join(fslDir, 'melodic'),
-                               inFile,
-                               melDir,
+                               op.join(fsl_dir, 'melodic'),
+                               in_file,
+                               mel_dir,
                                mask,
                                dim,
                                TR
@@ -105,47 +105,47 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
         os.system(melodic_command)
 
     # Get number of components
-    melIC_img = nib.load(melIC)
-    nrICs = melIC_img.shape[3]
+    mel_IC_img = nib.load(mel_IC)
+    nr_ICs = mel_IC_img.shape[3]
 
     # Merge mixture modeled thresholded spatial maps. Note! In case that
     # mixture modeling did not converge, the file will contain two spatial
     # maps. The latter being the results from a simple null hypothesis test.
     # In that case, this map will have to be used (first one will be empty).
-    for i in range(1, nrICs + 1):
+    for i in range(1, nr_ICs + 1):
         # Define thresholded zstat-map file
-        zTemp = op.join(melDir, 'stats', 'thresh_zstat{0}.nii.gz'.format(i))
+        z_temp = op.join(mel_dir, 'stats', 'thresh_zstat{0}.nii.gz'.format(i))
         cmd = "{0} {1} | grep dim4 | head -n1 | awk '{{print $2}}'".format(
-            op.join(fslDir, 'fslinfo'),
-            zTemp
+            op.join(fsl_dir, 'fslinfo'),
+            z_temp
         )
-        lenIC = int(float(subprocess.getoutput(cmd)))
+        len_IC = int(float(subprocess.getoutput(cmd)))
 
         # Define zeropad for this IC-number and new zstat file
-        cmd = ' '.join([op.join(fslDir, 'zeropad'),
+        cmd = ' '.join([op.join(fsl_dir, 'zeropad'),
                         str(i),
                         '4'])
-        ICnum = subprocess.getoutput(cmd)
-        zstat = op.join(outDir, 'thr_zstat' + ICnum)
+        IC_num = subprocess.getoutput(cmd)
+        zstat = op.join(out_dir, 'thr_zstat' + IC_num)
 
         # Extract last spatial map within the thresh_zstat file
-        os.system(' '.join([op.join(fslDir, 'fslroi'),
-                            zTemp,      # input
+        os.system(' '.join([op.join(fsl_dir, 'fslroi'),
+                            z_temp,      # input
                             zstat,      # output
-                            str(lenIC - 1),   # first frame
+                            str(len_IC - 1),   # first frame
                             '1']))      # number of frames
 
     # Merge and subsequently remove all mixture modeled Z-maps within the
     # output directory
     merge_command = "{0} -t {1} {2}".format(
-        op.join(fslDir, 'fslmerge'),
-        melICthr,
-        op.join(outDir, 'thr_zstat????.nii.gz')
+        op.join(fsl_dir, 'fslmerge'),
+        mel_IC_thr,
+        op.join(out_dir, 'thr_zstat????.nii.gz')
     )
     os.system(merge_command)  # inputs
 
     component_images = glob(
-        op.join(outDir, 'thr_zstat[0-9][0-9][0-9][0-9].nii.gz')
+        op.join(out_dir, 'thr_zstat[0-9][0-9][0-9][0-9].nii.gz')
     )
     for f in component_images:
         os.remove(f)
@@ -153,15 +153,15 @@ def runICA(fslDir, inFile, outDir, melDirIn, mask, dim, TR):
     # Apply the mask to the merged file (in case a melodic-directory was
     # predefined and run with a different mask)
     math_command = "{0} {1} -mas {2} {3}".format(
-        op.join(fslDir, 'fslmaths'),
-        melICthr,
+        op.join(fsl_dir, 'fslmaths'),
+        mel_IC_thr,
         mask,
-        melICthr,
+        mel_IC_thr,
     )
     os.system(math_command)
 
 
-def register2MNI(fslDir, inFile, outFile, affmat, warp):
+def register2MNI(fsl_dir, in_file, out_file, affmat, warp):
     """Register an image (or time-series of images) to MNI152 T1 2mm.
 
     If no affmat is defined, it only warps (i.e. it assumes that the data has
@@ -174,12 +174,12 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
 
     Parameters
     ----------
-    fslDir : str
+    fsl_dir : str
         Full path of the bin-directory of FSL
-    inFile : str
+    in_file : str
         Full path to the data file (nii.gz) which has to be registerd to
         MNI152 T1 2mm
-    outFile : str
+    out_file : str
         Full path of the output file
     affmat : str
         Full path of the mat file describing the linear registration (if data
@@ -195,57 +195,57 @@ def register2MNI(fslDir, inFile, outFile, affmat, warp):
                                   MNI152 2mm
     """
     # Define the MNI152 T1 2mm template
-    fslnobin = fslDir.rsplit('/', 2)[0]
+    fslnobin = fsl_dir.rsplit('/', 2)[0]
     ref = op.join(fslnobin, 'data', 'standard', 'MNI152_T1_2mm_brain.nii.gz')
 
     # If the no affmat- or warp-file has been specified, assume that the data
     # is already in MNI152 space. In that case only check if resampling to
     # 2mm is needed
     if not affmat and not warp:
-        in_img = nib.load(inFile)
+        in_img = nib.load(in_file)
         # Get 3D voxel size
         pixdim1, pixdim2, pixdim3 = in_img.header.get_zooms()[:3]
 
         # If voxel size is not 2mm isotropic, resample the data, otherwise
         # copy the file
         if (pixdim1 != 2) or (pixdim2 != 2) or (pixdim3 != 2):
-            os.system(' '.join([op.join(fslDir, 'flirt'),
+            os.system(' '.join([op.join(fsl_dir, 'flirt'),
                                 ' -ref ' + ref,
-                                ' -in ' + inFile,
-                                ' -out ' + outFile,
+                                ' -in ' + in_file,
+                                ' -out ' + out_file,
                                 ' -applyisoxfm 2 -interp trilinear']))
         else:
-            os.copyfile(inFile, outFile)
+            os.copyfile(in_file, out_file)
 
     # If only a warp-file has been specified, assume that the data has already
     # been registered to the structural scan. In that case apply the warping
     # without a affmat
     elif not affmat and warp:
         # Apply warp
-        os.system(' '.join([op.join(fslDir, 'applywarp'),
+        os.system(' '.join([op.join(fsl_dir, 'applywarp'),
                             '--ref=' + ref,
-                            '--in=' + inFile,
-                            '--out=' + outFile,
+                            '--in=' + in_file,
+                            '--out=' + out_file,
                             '--warp=' + warp,
                             '--interp=trilinear']))
 
     # If only a affmat-file has been specified perform affine registration to
     # MNI
     elif affmat and not warp:
-        os.system(' '.join([op.join(fslDir, 'flirt'),
+        os.system(' '.join([op.join(fsl_dir, 'flirt'),
                             '-ref ' + ref,
-                            '-in ' + inFile,
-                            '-out ' + outFile,
+                            '-in ' + in_file,
+                            '-out ' + out_file,
                             '-applyxfm -init ' + affmat,
                             '-interp trilinear']))
 
     # If both a affmat- and warp-file have been defined, apply the warping
     # accordingly
     else:
-        os.system(' '.join([op.join(fslDir, 'applywarp'),
+        os.system(' '.join([op.join(fsl_dir, 'applywarp'),
                             '--ref=' + ref,
-                            '--in=' + inFile,
-                            '--out=' + outFile,
+                            '--in=' + in_file,
+                            '--out=' + out_file,
                             '--warp=' + warp,
                             '--premat=' + affmat,
                             '--interp=trilinear']))
@@ -273,7 +273,7 @@ def cross_correlation(a, b):
     return np.corrcoef(a.T, b.T)[:ncols_a, ncols_a:]
 
 
-def classification(outDir, maxRPcorr, edgeFract, HFC, csfFract):
+def classification(out_dir, max_RP_corr, edge_fract, HFC, csf_fract):
     """Classify components as motion or non-motion based on four features.
 
     The four features used for classification are: maximum RP correlation,
@@ -281,20 +281,20 @@ def classification(outDir, maxRPcorr, edgeFract, HFC, csfFract):
 
     Parameters
     ----------
-    outDir : str
+    out_dir : str
         Full path of the output directory
-    maxRPcorr : (C,) array_like
+    max_RP_corr : (C,) array_like
         Array of the 'maximum RP correlation' feature scores of the components
-    edgeFract : (C,) array_like
+    edge_fract : (C,) array_like
         Array of the 'edge fraction' feature scores of the components
     HFC : (C,) array_like
         Array of the 'high-frequency content' feature scores of the components
-    csfFract : (C,) array_like
+    csf_fract : (C,) array_like
         Array of the 'CSF fraction' feature scores of the components
 
     Returns
     -------
-    motionICs : array_like
+    motion_ICs : array_like
         Array containing the indices of the components identified as motion
         components
 
@@ -311,35 +311,35 @@ def classification(outDir, maxRPcorr, edgeFract, HFC, csfFract):
     thr_HFC = 0.35
     hyp = np.array([-19.9751070082159, 9.95127547670627, 24.8333160239175])
 
-    # Project edge & maxRPcorr feature scores to new 1D space
-    x = np.array([maxRPcorr, edgeFract])
+    # Project edge & max_RP_corr feature scores to new 1D space
+    x = np.array([max_RP_corr, edge_fract])
     proj = hyp[0] + np.dot(x.T, hyp[1:])
 
     # Classify the ICs
-    motionICs = np.squeeze(
+    motion_ICs = np.squeeze(
         np.array(
             np.where(
                 (proj > 0)
-                + (csfFract > thr_csf)
+                + (csf_fract > thr_csf)
                 + (HFC > thr_HFC)
             )
         )
     )
 
     # Put the feature scores in a text file
-    np.savetxt(op.join(outDir, 'feature_scores.txt'),
-               np.vstack((maxRPcorr, edgeFract, HFC, csfFract)).T)
+    np.savetxt(op.join(out_dir, 'feature_scores.txt'),
+               np.vstack((max_RP_corr, edge_fract, HFC, csf_fract)).T)
 
     # Put the indices of motion-classified ICs in a text file
-    with open(op.join(outDir, 'classified_motion_ICs.txt'), 'w') as fo:
-        if motionICs.size > 1:
+    with open(op.join(out_dir, 'classified_motion_ICs.txt'), 'w') as fo:
+        if motion_ICs.size > 1:
             fo.write(','.join(['{:.0f}'.format(num) for num in
-                               (motionICs + 1)]))
-        elif motionICs.size == 1:
-            fo.write('{:.0f}'.format(motionICs + 1))
+                               (motion_ICs + 1)]))
+        elif motion_ICs.size == 1:
+            fo.write('{:.0f}'.format(motion_ICs + 1))
 
     # Create a summary overview of the classification
-    with open(op.join(outDir, 'classification_overview.txt'), 'w') as fo:
+    with open(op.join(out_dir, 'classification_overview.txt'), 'w') as fo:
         fo.write('\t'.join(['IC',
                             'Motion/noise',
                             'maximum RP correlation',
@@ -347,81 +347,81 @@ def classification(outDir, maxRPcorr, edgeFract, HFC, csfFract):
                             'High-frequency content',
                             'CSF-fraction']))
         fo.write('\n')
-        for i in range(0, len(csfFract)):
-            if (proj[i] > 0) or (csfFract[i] > thr_csf) or (HFC[i] > thr_HFC):
+        for i in range(0, len(csf_fract)):
+            if (proj[i] > 0) or (csf_fract[i] > thr_csf) or (HFC[i] > thr_HFC):
                 classif = "True"
             else:
                 classif = "False"
             fo.write('\t'.join(['{:d}'.format(i + 1),
                                 classif,
-                                '{:.2f}'.format(maxRPcorr[i]),
-                                '{:.2f}'.format(edgeFract[i]),
+                                '{:.2f}'.format(max_RP_corr[i]),
+                                '{:.2f}'.format(edge_fract[i]),
                                 '{:.2f}'.format(HFC[i]),
-                                '{:.2f}'.format(csfFract[i])]))
+                                '{:.2f}'.format(csf_fract[i])]))
             fo.write('\n')
 
-    return motionICs
+    return motion_ICs
 
 
-def denoising(fslDir, inFile, outDir, melmix, denType, denIdx):
+def denoising(fsl_dir, in_file, out_dir, mel_mix, den_type, den_idx):
     """Remove noise components from fMRI data.
 
     Parameters
     ----------
-    fslDir : str
+    fsl_dir : str
         Full path of the bin-directory of FSL
-    inFile : str
+    in_file : str
         Full path to the data file (nii.gz) which has to be denoised
-    outDir : str
+    out_dir : str
         Full path of the output directory
-    melmix : str
+    mel_mix : str
         Full path of the melodic_mix text file
-    denType : {"aggr", "nonaggr", "both"}
+    den_type : {"aggr", "nonaggr", "both"}
         Type of requested denoising ('aggr': aggressive, 'nonaggr':
         non-aggressive, 'both': both aggressive and non-aggressive
-    denIdx : array_like
+    den_idx : array_like
         Index of the components that should be regressed out
 
     Output
     ------
-    denoised_func_data_<denType>.nii.gz : The denoised fMRI data
+    denoised_func_data_<den_type>.nii.gz : The denoised fMRI data
     """
     # Check if denoising is needed (i.e. are there motion components?)
-    check = denIdx.size > 0
+    check = den_idx.size > 0
 
     if check == 1:
         # Put IC indices into a char array
-        if denIdx.size == 1:
-            denIdxStrJoin = str(denIdx + 1)
+        if den_idx.size == 1:
+            den_idx_str_join = str(den_idx + 1)
         else:
-            denIdxStrJoin = ','.join([str(i + 1) for i in denIdx])
+            den_idx_str_join = ','.join([str(i + 1) for i in den_idx])
 
         # Non-aggressive denoising of the data using fsl_regfilt
         # (partial regression), if requested
-        if denType in ('nonaggr', 'both'):
+        if den_type in ('nonaggr', 'both'):
             regfilt_command = ("{0} --in={1} --design={2} --filter='{3}' "
                                "--out={4}").format(
-                                   op.join(fslDir, 'fsl_regfilt'),
-                                   inFile,
-                                   melmix,
-                                   denIdxStrJoin,
+                                   op.join(fsl_dir, 'fsl_regfilt'),
+                                   in_file,
+                                   mel_mix,
+                                   den_idx_str_join,
                                    op.join(
-                                       outDir,
+                                       out_dir,
                                        'denoised_func_data_nonaggr.nii.gz'
                                    )
                                )
             os.system(regfilt_command)
 
         # Aggressive denoising of the data using fsl_regfilt (full regression)
-        if denType in ('aggr', 'both'):
+        if den_type in ('aggr', 'both'):
             regfilt_command = ("{0} --in={1} --design={2} --filter='{3}' "
                                "--out={4} -a").format(
-                                   op.join(fslDir, 'fsl_regfilt'),
-                                   inFile,
-                                   melmix,
-                                   denIdxStrJoin,
+                                   op.join(fsl_dir, 'fsl_regfilt'),
+                                   in_file,
+                                   mel_mix,
+                                   den_idx_str_join,
                                    op.join(
-                                       outDir,
+                                       out_dir,
                                        'denoised_func_data_aggr.nii.gz'
                                    )
                                )
@@ -430,16 +430,16 @@ def denoising(fslDir, inFile, outDir, melmix, denType, denIdx):
         print("  - None of the components were classified as motion, so no "
               "denoising is applied (a symbolic link to the input file will "
               "be created).")
-        if denType in ('nonaggr', 'both'):
+        if den_type in ('nonaggr', 'both'):
             os.symlink(
-                inFile,
-                op.join(outDir, 'denoised_func_data_nonaggr.nii.gz')
+                in_file,
+                op.join(out_dir, 'denoised_func_data_nonaggr.nii.gz')
             )
 
-        if denType in ('aggr', 'both'):
+        if den_type in ('aggr', 'both'):
             os.symlink(
-                inFile,
-                op.join(outDir, 'denoised_func_data_aggr.nii.gz')
+                in_file,
+                op.join(out_dir, 'denoised_func_data_aggr.nii.gz')
             )
 
 

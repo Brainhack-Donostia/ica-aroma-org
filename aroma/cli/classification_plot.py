@@ -19,8 +19,8 @@ def _get_parser():
                                     Use quotes when specifying a query""")
 
     optoptions = parser.add_argument_group('Optional arguments')
-    optoptions.add_argument('-outdir',
-                            dest='outDir',
+    optoptions.add_argument('-out_dir',
+                            dest='out_dir',
                             required=False,
                             default='.',
                             help="""Specification of directory
@@ -40,7 +40,7 @@ def _main(argv=None):
     """Entry point for classification_plot CLI."""
     options = _get_parser().parse_args(argv)
     if options.plottype == 'assessment':
-        plotting.classification_plot(options.myinput, options.outDir)
+        plotting.classification_plot(options.myinput, options.out_dir)
 
 
 if __name__ == "__main__":

@@ -9,15 +9,15 @@ from . import utils, features
 
 
 def aroma_workflow(
-    outDir,
-    inFeat=None,
-    inFile=None,
+    out_dir,
+    in_feat=None,
+    in_file=None,
     mc=None,
-    melDir=None,
+    mel_dir=None,
     affmat=None,
     warp=None,
     dim=0,
-    denType="nonaggr",
+    den_type="nonaggr",
     mask=None,
     TR=None,
     overwrite=False,
@@ -27,34 +27,34 @@ def aroma_workflow(
 
     Parameters
     ----------
-    inFeat
+    in_feat
     """
     print("\n------------------------ RUNNING ICA-AROMA ------------------------")
     print("-------- 'ICA-based Automatic Removal Of Motion Artifacts' --------\n")
-    if inFeat and inFile:
-        raise ValueError("Only one of 'inFeat' and 'inFile' may be provided.")
+    if in_feat and in_file:
+        raise ValueError("Only one of 'in_feat' and 'in_file' may be provided.")
 
-    if inFeat and (mc or affmat or warp or mask):
+    if in_feat and (mc or affmat or warp or mask):
         raise ValueError(
             "Arguments 'mc', 'affmat', 'warp', and 'mask' are incompatible "
-            "with argument 'inFeat'."
+            "with argument 'in_feat'."
         )
 
     # Define variables based on the type of input (i.e. Feat directory or
     # specific input arguments), and check whether the specified files exist.
-    if inFeat:
+    if in_feat:
         # Check whether the Feat directory exists
-        if not op.isdir(inFeat):
+        if not op.isdir(in_feat):
             raise Exception("The specified FEAT directory does not exist.")
 
         # Define the variables which should be located in the Feat directory
-        inFile = op.join(inFeat, "filtered_func_data.nii.gz")
-        mc = op.join(inFeat, "mc", "prefiltered_func_data_mcf.par")
-        affmat = op.join(inFeat, "reg", "example_func2highres.mat")
-        warp = op.join(inFeat, "reg", "highres2standard_warp.nii.gz")
+        in_file = op.join(in_feat, "filtered_func_data.nii.gz")
+        mc = op.join(in_feat, "mc", "prefiltered_func_data_mcf.par")
+        affmat = op.join(in_feat, "reg", "example_func2highres.mat")
+        warp = op.join(in_feat, "reg", "highres2standard_warp.nii.gz")
 
         # Check whether these files actually exist
-        if not op.isfile(inFile):
+        if not op.isfile(in_file):
             raise Exception("Missing filtered_func_data.nii.gz in Feat directory.")
 
         if not op.isfile(mc):
@@ -71,13 +71,13 @@ def aroma_workflow(
             )
 
         # Check whether a melodic.ica directory exists
-        if op.isdir(op.join(inFeat, "filtered_func_data.ica")):
-            melDir = op.join(inFeat, "filtered_func_data.ica")
+        if op.isdir(op.join(in_feat, "filtered_func_data.ica")):
+            mel_dir = op.join(in_feat, "filtered_func_data.ica")
     else:
         # Check whether the files exist
-        if not inFile:
+        if not in_file:
             print("No input file specified.")
-        elif not op.isfile(inFile):
+        elif not op.isfile(in_file):
             raise Exception("The specified input file does not exist.")
 
         if not mc:
@@ -96,42 +96,42 @@ def aroma_workflow(
         raise Exception("The specified mask does not exist.")
 
     # Check if the type of denoising is correctly specified, when specified
-    if denType not in ("nonaggr", "aggr", "both", "no"):
+    if den_type not in ("nonaggr", "aggr", "both", "no"):
         print(
             "Type of denoising was not correctly specified. Non-aggressive "
             "denoising will be run."
         )
-        denType = "nonaggr"
+        den_type = "nonaggr"
 
     # Prepare
 
     # Define the FSL-bin directory
-    fslDir = op.join(os.environ["FSLDIR"], "bin", "")
+    fsl_dir = op.join(os.environ["fsl_dir"], "bin", "")
 
     # Create output directory if needed
-    if op.isdir(outDir) and not overwrite:
+    if op.isdir(out_dir) and not overwrite:
         print(
             "Output directory",
-            outDir,
+            out_dir,
             """already exists.
             AROMA will not continue.
             Rerun with the -overwrite option to explicitly overwrite
             existing output.""",
         )
         return
-    elif op.isdir(outDir) and overwrite:
+    elif op.isdir(out_dir) and overwrite:
         print(
             "Warning! Output directory {} exists and will be overwritten."
-            "\n".format(outDir)
+            "\n".format(out_dir)
         )
-        shutil.rmtree(outDir)
-        os.makedirs(outDir)
+        shutil.rmtree(out_dir)
+        os.makedirs(out_dir)
     else:
-        os.makedirs(outDir)
+        os.makedirs(out_dir)
 
     # Get TR of the fMRI data, if not specified
     if not TR:
-        in_img = nib.load(inFile)
+        in_img = nib.load(in_file)
         TR = in_img.header.get_zooms()[3]
 
     # Check TR
@@ -151,66 +151,66 @@ def aroma_workflow(
 
     # Define/create mask. Either by making a copy of the specified mask, or by
     # creating a new one.
-    new_mask = op.join(outDir, "mask.nii.gz")
+    new_mask = op.join(out_dir, "mask.nii.gz")
     if mask:
         shutil.copyfile(mask, new_mask)
-    elif inFeat and op.isfile(op.join(inFeat, "example_func.nii.gz")):
+    elif in_feat and op.isfile(op.join(in_feat, "example_func.nii.gz")):
         # If a Feat directory is specified, and an example_func is present use
         # example_func to create a mask
         bet_command = "{0} {1} {2} -f 0.3 -n -m -R".format(
-            op.join(fslDir, "bet"),
-            op.join(inFeat, "example_func.nii.gz"),
-            op.join(outDir, "bet"),
+            op.join(fsl_dir, "bet"),
+            op.join(in_feat, "example_func.nii.gz"),
+            op.join(out_dir, "bet"),
         )
         os.system(bet_command)
-        os.rename(op.join(outDir, "bet_mask.nii.gz"), new_mask)
-        if op.isfile(op.join(outDir, "bet.nii.gz")):
-            os.remove(op.join(outDir, "bet.nii.gz"))
+        os.rename(op.join(out_dir, "bet_mask.nii.gz"), new_mask)
+        if op.isfile(op.join(out_dir, "bet.nii.gz")):
+            os.remove(op.join(out_dir, "bet.nii.gz"))
     else:
-        if inFeat:
+        if in_feat:
             print(
                 " - No example_func was found in the Feat directory. "
                 "A mask will be created including all voxels with varying "
                 "intensity over time in the fMRI data. Please check!\n"
             )
         math_command = "{0} {1} -Tstd -bin {2}".format(
-            op.join(fslDir, "fslmaths"), inFile, new_mask
+            op.join(fsl_dir, "fslmaths"), in_file, new_mask
         )
         os.system(math_command)
 
     # Run ICA-AROMA
     print("Step 1) MELODIC")
-    utils.runICA(fslDir, inFile, outDir, melDir, new_mask, dim, TR)
+    utils.runICA(fsl_dir, in_file, out_dir, mel_dir, new_mask, dim, TR)
 
     print("Step 2) Automatic classification of the components")
     print("  - registering the spatial maps to MNI")
-    melIC = op.join(outDir, "melodic_IC_thr.nii.gz")
-    melIC_MNI = op.join(outDir, "melodic_IC_thr_MNI2mm.nii.gz")
-    utils.register2MNI(fslDir, melIC, melIC_MNI, affmat, warp)
+    mel_IC = op.join(out_dir, "melodic_IC_thr.nii.gz")
+    mel_IC_MNI = op.join(out_dir, "melodic_IC_thr_MNI2mm.nii.gz")
+    utils.register2MNI(fsl_dir, mel_IC, mel_IC_MNI, affmat, warp)
 
     print("  - extracting the CSF & Edge fraction features")
-    edgeFract, csfFract = features.feature_spatial(melIC_MNI)
+    edge_fract, csf_fract = features.feature_spatial(mel_IC_MNI)
 
     print("  - extracting the Maximum RP correlation feature")
-    melmix = op.join(outDir, "melodic.ica", "melodic_mix")
-    maxRPcorr = features.feature_time_series(melmix, mc)
+    mel_mix = op.join(out_dir, "melodic.ica", "melodic_mix")
+    max_RP_corr = features.feature_time_series(mel_mix, mc)
 
     print("  - extracting the High-frequency content feature")
-    melFTmix = op.join(outDir, "melodic.ica", "melodic_FTmix")
-    HFC = features.feature_frequency(melFTmix, TR)
+    mel_FT_mix = op.join(out_dir, "melodic.ica", "melodic_FTmix")
+    HFC = features.feature_frequency(mel_FT_mix, TR)
 
     print("  - classification")
-    motionICs = utils.classification(outDir, maxRPcorr, edgeFract, HFC, csfFract)
+    motion_ICs = utils.classification(out_dir, max_RP_corr, edge_fract, HFC, csf_fract)
 
     if generate_plots:
         from . import plotting
 
         plotting.classification_plot(
-            op.join(outDir, "classification_overview.txt"), outDir
+            op.join(out_dir, "classification_overview.txt"), out_dir
         )
 
-    if denType != "no":
+    if den_type != "no":
         print("Step 3) Data denoising")
-        utils.denoising(fslDir, inFile, outDir, melmix, denType, motionICs)
+        utils.denoising(fsl_dir, in_file, out_dir, mel_mix, den_type, motion_ICs)
 
     print("Finished")
