@@ -396,9 +396,7 @@ def denoising(fsl_dir, in_file, out_dir, mixing, den_type, den_idx):
 
     if motion_components_found:
         mixing = np.loadtxt(mixing)
-        good_idx = np.setdiff1d(np.arange(mixing.shape[1]), den_idx)
         motion_components = mixing[:, den_idx]
-        good_components = mixing[:, good_idx]
 
         # Create a fake mask to make it easier to reshape the full data to 2D
         img = nib.load(in_file)
@@ -408,14 +406,11 @@ def denoising(fsl_dir, in_file, out_dir, mixing, den_type, den_idx):
         # Non-aggressive denoising of the data using fsl_regfilt
         # (partial regression), if requested
         if den_type in ("nonaggr", "both"):
-            # Orthogonalize the bad components w.r.t. to good components.
-            betas = np.linalg.lstsq(good_components, motion_components, rcond=None)[0]
-            pred_motion_comps = np.dot(good_components, betas)
-            motion_components_orth = motion_components - pred_motion_comps
+            # Fit GLM to all components
+            betas = np.linalg.lstsq(mixing, data, rcond=None)[0]
 
-            # Denoise the data with the orthogonalized bad components.
-            betas = np.linalg.lstsq(motion_components_orth, data, rcond=None)[0]
-            pred_data = np.dot(motion_components_orth, betas)
+            # Denoise the data using the betas from just the bad components.
+            pred_data = np.dot(motion_components, betas[den_idx, :])
             data_denoised = data - pred_data
 
             # Save to file.
@@ -426,7 +421,7 @@ def denoising(fsl_dir, in_file, out_dir, mixing, den_type, den_idx):
         if den_type in ("aggr", "both"):
             # Denoise the data with the bad components.
             betas = np.linalg.lstsq(motion_components, data, rcond=None)[0]
-            pred_data = np.dot(motion_components_orth, betas)
+            pred_data = np.dot(motion_components, betas)
             data_denoised = data - pred_data
 
             # Save to file.
