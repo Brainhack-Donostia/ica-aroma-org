@@ -402,7 +402,7 @@ def denoising(fsl_dir, in_file, out_dir, mixing, den_type, den_idx):
 
         # Create a fake mask to make it easier to reshape the full data to 2D
         img = nib.load(in_file)
-        full_mask = nib.Nifti1Image(np.ones(img.shape, int), img.affine)
+        full_mask = nib.Nifti1Image(np.ones(img.shape[:3], int), img.affine)
         data = masking.apply_mask(img, full_mask)  # T x S
 
         # Non-aggressive denoising of the data using fsl_regfilt
