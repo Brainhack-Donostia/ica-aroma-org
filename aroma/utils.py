@@ -1,7 +1,6 @@
 """Utility functions for ICA-AROMA."""
 import os
 import os.path as op
-from glob import glob
 
 import nibabel as nib
 import numpy as np
