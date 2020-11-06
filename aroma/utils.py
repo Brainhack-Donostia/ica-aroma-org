@@ -92,7 +92,7 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
                       'run separately.')
 
         # Run MELODIC
-        melodic_command = ("{0} --in={1} --out_dir={2} --mask={3} --dim={4} "
+        melodic_command = ("{0} --in={1} --outdir={2} --mask={3} --dim={4} "
                            "--Ostats --nobet --mmthresh=0.5 --report "
                            "--tr={5}").format(
                                op.join(fsl_dir, 'melodic'),
