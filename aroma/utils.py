@@ -119,7 +119,10 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
 
         # Get number of volumes in component's thresholded image
         z_temp_img = nib.load(z_temp)
-        len_IC = z_temp_img.shape[4]
+        if z_temp_img.ndim == 4:
+            len_IC = z_temp_img.shape[3]
+        else:
+            len_IC = 1
 
         # Extract last spatial map within the thresh_zstat file
         zstat_img = image.index_img(z_temp, len_IC - 1)
