@@ -114,7 +114,7 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
     zstat_imgs = []
     for i in range(1, nr_ICs + 1):
         # Define thresholded zstat-map file
-        z_temp = op.join(mel_dir, 'stats', 'thresh_zstat{0}.nii.gz'.format(i))
+        z_temp = op.join(mel_dir, "stats", "thresh_zstat{0}.nii.gz".format(i))
 
         # Get number of volumes in component's thresholded image
         z_temp_img = nib.load(z_temp)
@@ -132,7 +132,9 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
 
     # Apply the mask to the merged image (in case a melodic-directory was
     # predefined and run with a different mask)
-    zstat_4d_img = image.math_img("stat * mask", stat=zstat_4d_img, mask=mask)
+    zstat_4d_img = image.math_img(
+        "stat * mask[:, :, :, None]", stat=zstat_4d_img, mask=mask
+    )
     zstat_4d_img.to_filename(mel_IC_thr)
 
 
