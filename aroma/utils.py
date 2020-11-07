@@ -6,6 +6,40 @@ import shutil
 import nibabel as nib
 import numpy as np
 from nilearn import image, masking
+from scipy import ndimage
+
+
+def derive_masks(in_file, csf=None):
+    if csf is None:
+        print("No CSF TPM/mask provided. Using packaged masks.")
+        mask_dir = get_resource_path()
+        csf_img = nib.load(op.join(mask_dir, 'mask_csf.nii.gz'))
+        out_img = nib.load(op.join(mask_dir, 'mask_out.nii.gz'))
+        brain_img = image.math_img('1 - mask', mask=out_img)
+        edge_img = nib.load(op.join(mask_dir, "mask_edge.nii.gz"))
+    else:
+        brain_img = masking.compute_epi_mask(in_file)
+        out_img = image.math_img('1 - mask', mask=brain_img)
+        csf_img = nib.load(csf)
+        csf_data = csf_img.get_fdata()
+        if len(np.unique(csf_data)) == 2:
+            print("CSF mask provided. Inferring other masks.")
+        else:
+            print("CSF TPM provided. Inferring CSF and other masks.")
+            csf_img = image.math_img('csf >= 0.3', csf=csf_img)
+        gmwm_img = image.math_img('(brain - csf) > 0', brain=brain_img, csf=csf_img)
+        gmwm_data = gmwm_img.get_fdata()
+        eroded_data = ndimage.binary_erosion(gmwm_data, iterations=4)
+        edge_data = gmwm_data - eroded_data
+        edge_img = nib.Nifti1Image(edge_data, gmwm_img.affine, header=gmwm_img.header)
+
+    masks = {
+        "brain": brain_img,
+        "csf": csf_img,
+        "edge": edge_img,
+        "out": out_img,
+    }
+    return masks
 
 
 def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
@@ -137,96 +171,6 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
         "stat * mask[:, :, :, None]", stat=zstat_4d_img, mask=mask
     )
     zstat_4d_img.to_filename(mel_IC_thr)
-
-
-def register2MNI(fsl_dir, in_file, out_file, affmat, warp):
-    """Register an image (or time-series of images) to MNI152 T1 2mm.
-
-    If no affmat is defined, it only warps (i.e. it assumes that the data has
-    been registered to the structural scan associated with the warp-file
-    already). If no warp is defined either, it only resamples the data to 2mm
-    isotropic if needed (i.e. it assumes that the data has been registered to
-    a MNI152 template). In case only an affmat file is defined, it assumes that
-    the data has to be linearly registered to MNI152 (i.e. the user has a
-    reason not to use non-linear registration on the data).
-
-    Parameters
-    ----------
-    fsl_dir : str
-        Full path of the bin-directory of FSL
-    in_file : str
-        Full path to the data file (nii.gz) which has to be registerd to
-        MNI152 T1 2mm
-    out_file : str
-        Full path of the output file
-    affmat : str
-        Full path of the mat file describing the linear registration (if data
-        is still in native space)
-    warp : str
-        Full path of the warp file describing the non-linear registration (if
-        data has not been registered to MNI152 space yet)
-
-    Output
-    ------
-    melodic_IC_mm_MNI2mm.nii.gz : merged file containing the mixture modeling
-                                  thresholded Z-statistical maps registered to
-                                  MNI152 2mm
-    """
-    # Define the MNI152 T1 2mm template
-    fslnobin = fsl_dir.rsplit('/', 2)[0]
-    ref = op.join(fslnobin, 'data', 'standard', 'MNI152_T1_2mm_brain.nii.gz')
-
-    # If the no affmat- or warp-file has been specified, assume that the data
-    # is already in MNI152 space. In that case only check if resampling to
-    # 2mm is needed
-    if not affmat and not warp:
-        in_img = nib.load(in_file)
-        # Get 3D voxel size
-        pixdim1, pixdim2, pixdim3 = in_img.header.get_zooms()[:3]
-
-        # If voxel size is not 2mm isotropic, resample the data, otherwise
-        # copy the file
-        if (pixdim1 != 2) or (pixdim2 != 2) or (pixdim3 != 2):
-            os.system(' '.join([op.join(fsl_dir, 'flirt'),
-                                ' -ref ' + ref,
-                                ' -in ' + in_file,
-                                ' -out ' + out_file,
-                                ' -applyisoxfm 2 -interp trilinear']))
-        else:
-            os.copyfile(in_file, out_file)
-
-    # If only a warp-file has been specified, assume that the data has already
-    # been registered to the structural scan. In that case apply the warping
-    # without a affmat
-    elif not affmat and warp:
-        # Apply warp
-        os.system(' '.join([op.join(fsl_dir, 'applywarp'),
-                            '--ref=' + ref,
-                            '--in=' + in_file,
-                            '--out=' + out_file,
-                            '--warp=' + warp,
-                            '--interp=trilinear']))
-
-    # If only a affmat-file has been specified perform affine registration to
-    # MNI
-    elif affmat and not warp:
-        os.system(' '.join([op.join(fsl_dir, 'flirt'),
-                            '-ref ' + ref,
-                            '-in ' + in_file,
-                            '-out ' + out_file,
-                            '-applyxfm -init ' + affmat,
-                            '-interp trilinear']))
-
-    # If both a affmat- and warp-file have been defined, apply the warping
-    # accordingly
-    else:
-        os.system(' '.join([op.join(fsl_dir, 'applywarp'),
-                            '--ref=' + ref,
-                            '--in=' + in_file,
-                            '--out=' + out_file,
-                            '--warp=' + warp,
-                            '--premat=' + affmat,
-                            '--interp=trilinear']))
 
 
 def cross_correlation(a, b):
