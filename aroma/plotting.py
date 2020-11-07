@@ -231,4 +231,3 @@ def classification_plot(in_file, out_dir):
         dpi=300,
     )
 
-    return

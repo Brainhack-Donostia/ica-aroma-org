@@ -1,10 +1,11 @@
 """Utility functions for ICA-AROMA."""
 import os
 import os.path as op
+import shutil
 
 import nibabel as nib
 import numpy as np
-from nilearn import image
+from nilearn import image, masking
 
 
 def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
@@ -346,7 +347,7 @@ def classification(features_df, out_dir):
     return motion_ICs
 
 
-def denoising(fsl_dir, in_file, out_dir, mel_mix, den_type, den_idx):
+def denoising(fsl_dir, in_file, out_dir, mixing, den_type, den_idx):
     """Remove noise components from fMRI data.
 
     Parameters
@@ -357,7 +358,7 @@ def denoising(fsl_dir, in_file, out_dir, mel_mix, den_type, den_idx):
         Full path to the data file (nii.gz) which has to be denoised
     out_dir : str
         Full path of the output directory
-    mel_mix : str
+    mixing : str
         Full path of the melodic_mix text file
     den_type : {"aggr", "nonaggr", "both"}
         Type of requested denoising ('aggr': aggressive, 'nonaggr':
@@ -370,52 +371,54 @@ def denoising(fsl_dir, in_file, out_dir, mel_mix, den_type, den_idx):
     denoised_func_data_<den_type>.nii.gz : The denoised fMRI data
     """
     # Check if denoising is needed (i.e. are there motion components?)
-    check = den_idx.size > 0
+    motion_components_found = den_idx.size > 0
 
-    if check == 1:
-        # Put IC indices into a char array
-        if den_idx.size == 1:
-            den_idx_str_join = str(den_idx + 1)
-        else:
-            den_idx_str_join = ",".join([str(i + 1) for i in den_idx])
+    nonaggr_denoised_file = op.join(out_dir, "denoised_func_data_nonaggr.nii.gz")
+    aggr_denoised_file = op.join(out_dir, "denoised_func_data_aggr.nii.gz")
+
+    if motion_components_found:
+        mixing = np.loadtxt(mixing)
+        motion_components = mixing[:, den_idx]
+
+        # Create a fake mask to make it easier to reshape the full data to 2D
+        img = nib.load(in_file)
+        full_mask = nib.Nifti1Image(np.ones(img.shape[:3], int), img.affine)
+        data = masking.apply_mask(img, full_mask)  # T x S
 
         # Non-aggressive denoising of the data using fsl_regfilt
         # (partial regression), if requested
         if den_type in ("nonaggr", "both"):
-            regfilt_command = (
-                "{0} --in={1} --design={2} --filter='{3}' " "--out={4}"
-            ).format(
-                op.join(fsl_dir, "fsl_regfilt"),
-                in_file,
-                mel_mix,
-                den_idx_str_join,
-                op.join(out_dir, "denoised_func_data_nonaggr.nii.gz"),
-            )
-            os.system(regfilt_command)
+            # Fit GLM to all components
+            betas = np.linalg.lstsq(mixing, data, rcond=None)[0]
+
+            # Denoise the data using the betas from just the bad components.
+            pred_data = np.dot(motion_components, betas[den_idx, :])
+            data_denoised = data - pred_data
+
+            # Save to file.
+            img_denoised = masking.unmask(data_denoised, full_mask)
+            img_denoised.to_filename(nonaggr_denoised_file)
 
         # Aggressive denoising of the data using fsl_regfilt (full regression)
         if den_type in ("aggr", "both"):
-            regfilt_command = (
-                "{0} --in={1} --design={2} --filter='{3}' " "--out={4} -a"
-            ).format(
-                op.join(fsl_dir, "fsl_regfilt"),
-                in_file,
-                mel_mix,
-                den_idx_str_join,
-                op.join(out_dir, "denoised_func_data_aggr.nii.gz"),
-            )
-            os.system(regfilt_command)
+            # Denoise the data with the bad components.
+            betas = np.linalg.lstsq(motion_components, data, rcond=None)[0]
+            pred_data = np.dot(motion_components, betas)
+            data_denoised = data - pred_data
+
+            # Save to file.
+            img_denoised = masking.unmask(data_denoised, full_mask)
+            img_denoised.to_filename(aggr_denoised_file)
     else:
         print(
             "  - None of the components were classified as motion, so no "
-            "denoising is applied (a symbolic link to the input file will "
-            "be created)."
+            "denoising is applied (the input file is copied as-is)."
         )
         if den_type in ("nonaggr", "both"):
-            os.symlink(in_file, op.join(out_dir, "denoised_func_data_nonaggr.nii.gz"))
+            shutil.copyfile(in_file, nonaggr_denoised_file)
 
         if den_type in ("aggr", "both"):
-            os.symlink(in_file, op.join(out_dir, "denoised_func_data_aggr.nii.gz"))
+            shutil.copyfile(in_file, aggr_denoised_file)
 
 
 def get_resource_path():
