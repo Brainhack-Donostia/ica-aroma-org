@@ -5,6 +5,7 @@ import shutil
 
 import nibabel as nib
 import numpy as np
+import pandas as pd
 from nilearn import image, masking
 
 
@@ -413,6 +414,94 @@ def denoising(fsl_dir, in_file, out_dir, mixing, den_type, den_idx):
 
         if den_type in ("aggr", "both"):
             shutil.copyfile(in_file, aggr_denoised_file)
+
+
+def motpars_fmriprep2fsl(confounds):
+    """
+    Convert fMRIPrep motion parameters to FSL format
+    """
+    if isinstance(confounds, str) and op.isfile(confounds):
+        confounds = pd.read_table(confounds)
+    elif not isinstance(confounds, pd.DataFrame):
+        raise ValueError("Input must be an existing file or a DataFrame.")
+
+    # Rotations are in radians
+    motpars = confounds[
+        ["rot_x", "rot_y", "rot_z", "trans_x", "trans_y", "trans_z"]
+    ].values
+    return motpars
+
+
+def motpars_spm2fsl(motpars):
+    """
+    Convert SPM format motion parameters to FSL format
+    """
+    if isinstance(motpars, str) and op.isfile(motpars):
+        motpars = np.loadtxt(motpars)
+    elif not isinstance(motpars, np.array):
+        raise ValueError("Input must be an existing file or a numpy array.")
+
+    # Split translations from rotations
+    trans, rot = motpars[:, :3], motpars[:, 3:]
+
+    # Convert rotations from degrees to radians
+    rot *= np.pi / 180.0
+
+    # Place rotations first
+    motpars_fsl = np.hstack((rot, trans))
+    return motpars_fsl
+
+
+def motpars_afni2fsl(motpars):
+    """
+    Convert AFNI format motion parameters to FSL format
+    """
+    if isinstance(motpars, str) and op.isfile(motpars):
+        motpars = np.loadtxt(motpars)
+    elif not isinstance(motpars, np.array):
+        raise ValueError("Input must be an existing file or a numpy array.")
+
+    # Split translations from rotations
+    trans, rot = motpars[:, :3], motpars[:, 3:]
+
+    # Convert rotations from degrees to radians
+    rot *= np.pi / 180.0
+
+    # Place rotations first
+    motpars_fsl = np.hstack((rot, trans))
+    return motpars_fsl
+
+
+def load_motpars(motion_file, source="auto"):
+    """
+    Load motion parameters from file.
+    """
+    if source == "auto":
+        if motion_file.startswith("rp_") and motion_file.endswith(".txt"):
+            source = "spm"
+        elif motion_file.endswith(".1D"):
+            source = "afni"
+        elif motion_file.endswith(".txt"):
+            source = "fsl"
+        elif motion_file.endswith(".tsv"):
+            source = "fmriprep"
+        else:
+            raise Exception(
+                "Motion parameter source could not be determined automatically."
+            )
+
+    if source == "spm":
+        motpars = motpars_spm2fsl(motion_file)
+    elif source == "afni":
+        motpars = motpars_afni2fsl(motion_file)
+    elif source == "fsl":
+        motpars = np.loadtxt(motion_file)
+    elif source == "fmriprep":
+        motpars = motpars_fmriprep2fsl(motion_file)
+    else:
+        raise ValueError('Source "{0}" not supported.'.format(source))
+
+    return motpars
 
 
 def get_resource_path():
