@@ -70,7 +70,7 @@ def classification_plot(in_file, out_dir):
         }
     )
     df["classification"] = df["classification"].map(
-        {"rejected": True, "accepted": False}
+        {"rejected": "True", "accepted": "False"}
     )
 
     # Make pretty figure
