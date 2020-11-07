@@ -26,7 +26,7 @@ def derive_masks(in_file, csf=None):
             print("CSF mask provided. Inferring other masks.")
         else:
             print("CSF TPM provided. Inferring CSF and other masks.")
-            csf_img = image.math_img("csf >= 0.3", csf=csf_img)
+            csf_img = image.math_img("csf >= 0.95", csf=csf_img)
         gmwm_img = image.math_img("(brain - csf) > 0", brain=brain_img, csf=csf_img)
         gmwm_data = gmwm_img.get_fdata()
         eroded_data = ndimage.binary_erosion(gmwm_data, iterations=4)
