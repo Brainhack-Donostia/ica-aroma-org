@@ -230,4 +230,3 @@ def classification_plot(in_file, out_dir):
         bbox_inches="tight",
         dpi=300,
     )
-
