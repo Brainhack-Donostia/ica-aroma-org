@@ -10,6 +10,21 @@ from scipy import ndimage
 
 
 def derive_masks(in_file, csf=None):
+    """Estimate or load necessary masks based on inputs.
+
+    Parameters
+    ----------
+    in_file : str
+        4D EPI file.
+    csf : None or str, optional
+        CSF tissue probability map or binary mask.
+        If None, use precomputed, standard space masks packaged with AROMA.
+
+    Returns
+    -------
+    masks : dict
+        Dictionary with the different masks as img_like objects.
+    """
     if csf is None:
         print("No CSF TPM/mask provided. Using packaged masks.")
         mask_dir = get_resource_path()
