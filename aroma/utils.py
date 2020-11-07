@@ -528,10 +528,10 @@ def load_motpars(motion_file, source="auto"):
             source = "spm"
         elif motion_file.endswith(".1D"):
             source = "afni"
-        elif motion_file.endswith(".txt"):
-            source = "fsl"
         elif motion_file.endswith(".tsv"):
             source = "fmriprep"
+        elif motion_file.endswith(".txt"):
+            source = "fsl"
         else:
             raise Exception(
                 "Motion parameter source could not be determined automatically."
