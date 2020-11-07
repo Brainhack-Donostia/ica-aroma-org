@@ -106,7 +106,7 @@ def aroma_workflow(
     # Prepare
 
     # Define the FSL-bin directory
-    fsl_dir = op.join(os.environ["fsl_dir"], "bin", "")
+    fsl_dir = op.join(os.environ["FSLDIR"], "bin", "")
 
     # Create output directory if needed
     if op.isdir(out_dir) and not overwrite:

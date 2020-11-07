@@ -21,28 +21,28 @@ def test_feature_time_series(nilearn_data):
     mc_path = op.join(test_path, "mc.tsv")
     mc.to_csv(mc_path, sep="\t", index=False, header=None)
 
-    # Get path to melmix file
+    # Get path to mel_mix file
     cwd = get_tests_resource_path()
-    melmix = op.join(cwd, "melodic_mix")
+    mel_mix = op.join(cwd, "melodic_mix")
 
     # Run feature_time_series
-    maxRPcorr = features.feature_time_series(melmix, mc_path)
+    max_RP_corr = features.feature_time_series(mel_mix, mc_path)
 
     # Expected values
-    true_maxRPcorr = np.array(
+    true_max_RP_corr = np.array(
         [0.65255575, 0.86003032, 0.88690363, 0.61399576, 0.43840624]
     )
 
-    assert np.allclose(maxRPcorr[: len(true_maxRPcorr)], true_maxRPcorr, atol=1e-2)
+    assert np.allclose(max_RP_corr[: len(true_max_RP_corr)], true_max_RP_corr, atol=1e-2)
 
 
 def test_feature_frequency(nilearn_data):
 
-    # Get path to melmix file
+    # Get path to mel_mix file
     cwd = get_tests_resource_path()
-    melTmix = op.join(cwd, "melodic_FTmix")
+    mel_T_mix = op.join(cwd, "melodic_FTmix")
 
-    HFC = features.feature_frequency(melTmix, TR=2)
+    HFC = features.feature_frequency(mel_T_mix, TR=2)
 
     # Expected values
     true_HFC = np.array([0.96279762, 0.08234127, 0.13194444, 0.96279762, 0.04513889])

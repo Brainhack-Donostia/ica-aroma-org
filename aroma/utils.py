@@ -2,12 +2,10 @@
 import os
 import os.path as op
 import shutil
-import subprocess
-from glob import glob
 
 import nibabel as nib
 import numpy as np
-from nilearn import masking
+from nilearn import image, masking
 
 
 def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
@@ -94,7 +92,7 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
                       'run separately.')
 
         # Run MELODIC
-        melodic_command = ("{0} --in={1} --out_dir={2} --mask={3} --dim={4} "
+        melodic_command = ("{0} --in={1} --outdir={2} --mask={3} --dim={4} "
                            "--Ostats --nobet --mmthresh=0.5 --report "
                            "--tr={5}").format(
                                op.join(fsl_dir, 'melodic'),
@@ -114,53 +112,31 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
     # mixture modeling did not converge, the file will contain two spatial
     # maps. The latter being the results from a simple null hypothesis test.
     # In that case, this map will have to be used (first one will be empty).
+    zstat_imgs = []
     for i in range(1, nr_ICs + 1):
         # Define thresholded zstat-map file
-        z_temp = op.join(mel_dir, 'stats', 'thresh_zstat{0}.nii.gz'.format(i))
-        cmd = "{0} {1} | grep dim4 | head -n1 | awk '{{print $2}}'".format(
-            op.join(fsl_dir, 'fslinfo'),
-            z_temp
-        )
-        len_IC = int(float(subprocess.getoutput(cmd)))
+        z_temp = op.join(mel_dir, "stats", "thresh_zstat{0}.nii.gz".format(i))
 
-        # Define zeropad for this IC-number and new zstat file
-        cmd = ' '.join([op.join(fsl_dir, 'zeropad'),
-                        str(i),
-                        '4'])
-        IC_num = subprocess.getoutput(cmd)
-        zstat = op.join(out_dir, 'thr_zstat' + IC_num)
+        # Get number of volumes in component's thresholded image
+        z_temp_img = nib.load(z_temp)
+        if z_temp_img.ndim == 4:
+            len_IC = z_temp_img.shape[3]
+            # Extract last spatial map within the thresh_zstat file
+            zstat_img = image.index_img(z_temp_img, len_IC - 1)
+        else:
+            zstat_img = z_temp_img
 
-        # Extract last spatial map within the thresh_zstat file
-        os.system(' '.join([op.join(fsl_dir, 'fslroi'),
-                            z_temp,      # input
-                            zstat,      # output
-                            str(len_IC - 1),   # first frame
-                            '1']))      # number of frames
+        zstat_imgs.append(zstat_img)
 
-    # Merge and subsequently remove all mixture modeled Z-maps within the
-    # output directory
-    merge_command = "{0} -t {1} {2}".format(
-        op.join(fsl_dir, 'fslmerge'),
-        mel_IC_thr,
-        op.join(out_dir, 'thr_zstat????.nii.gz')
-    )
-    os.system(merge_command)  # inputs
+    # Merge to 4D
+    zstat_4d_img = image.concat_imgs(zstat_imgs)
 
-    component_images = glob(
-        op.join(out_dir, 'thr_zstat[0-9][0-9][0-9][0-9].nii.gz')
-    )
-    for f in component_images:
-        os.remove(f)
-
-    # Apply the mask to the merged file (in case a melodic-directory was
+    # Apply the mask to the merged image (in case a melodic-directory was
     # predefined and run with a different mask)
-    math_command = "{0} {1} -mas {2} {3}".format(
-        op.join(fsl_dir, 'fslmaths'),
-        mel_IC_thr,
-        mask,
-        mel_IC_thr,
+    zstat_4d_img = image.math_img(
+        "stat * mask[:, :, :, None]", stat=zstat_4d_img, mask=mask
     )
-    os.system(math_command)
+    zstat_4d_img.to_filename(mel_IC_thr)
 
 
 def register2MNI(fsl_dir, in_file, out_file, affmat, warp):
