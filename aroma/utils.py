@@ -13,21 +13,21 @@ def derive_masks(in_file, csf=None):
     if csf is None:
         print("No CSF TPM/mask provided. Using packaged masks.")
         mask_dir = get_resource_path()
-        csf_img = nib.load(op.join(mask_dir, 'mask_csf.nii.gz'))
-        out_img = nib.load(op.join(mask_dir, 'mask_out.nii.gz'))
-        brain_img = image.math_img('1 - mask', mask=out_img)
+        csf_img = nib.load(op.join(mask_dir, "mask_csf.nii.gz"))
+        out_img = nib.load(op.join(mask_dir, "mask_out.nii.gz"))
+        brain_img = image.math_img("1 - mask", mask=out_img)
         edge_img = nib.load(op.join(mask_dir, "mask_edge.nii.gz"))
     else:
         brain_img = masking.compute_epi_mask(in_file)
-        out_img = image.math_img('1 - mask', mask=brain_img)
+        out_img = image.math_img("1 - mask", mask=brain_img)
         csf_img = nib.load(csf)
         csf_data = csf_img.get_fdata()
         if len(np.unique(csf_data)) == 2:
             print("CSF mask provided. Inferring other masks.")
         else:
             print("CSF TPM provided. Inferring CSF and other masks.")
-            csf_img = image.math_img('csf >= 0.3', csf=csf_img)
-        gmwm_img = image.math_img('(brain - csf) > 0', brain=brain_img, csf=csf_img)
+            csf_img = image.math_img("csf >= 0.3", csf=csf_img)
+        gmwm_img = image.math_img("(brain - csf) > 0", brain=brain_img, csf=csf_img)
         gmwm_data = gmwm_img.get_fdata()
         eroded_data = ndimage.binary_erosion(gmwm_data, iterations=4)
         edge_data = gmwm_data - eroded_data
