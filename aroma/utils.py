@@ -79,6 +79,15 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
     TR : float
         TR (in seconds) of the fMRI data
 
+    Returns
+    -------
+    mel_IC_thr : str
+        Path to 4D nifti file containing thresholded component maps.
+    mel_IC_mix : str
+        Path to mixing matrix.
+    mel_FT_mix : str
+        Path to component power spectrum file.
+
     Output
     ------
     melodic.ica/: MELODIC directory
@@ -90,6 +99,7 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
     mel_dir = op.join(out_dir, 'melodic.ica')
     mel_IC = op.join(mel_dir, 'melodic_IC.nii.gz')
     mel_IC_mix = op.join(mel_dir, 'melodic_mix')
+    mel_FT_mix = op.join(mel_dir, "melodic_FTmix")
     mel_IC_thr = op.join(out_dir, 'melodic_IC_thr.nii.gz')
 
     # When a MELODIC directory is specified,
@@ -186,6 +196,7 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
         "stat * mask[:, :, :, None]", stat=zstat_4d_img, mask=mask
     )
     zstat_4d_img.to_filename(mel_IC_thr)
+    return mel_IC_thr, mel_IC_mix, mel_FT_mix
 
 
 def cross_correlation(a, b):
