@@ -5,10 +5,10 @@ import nibabel as nib
 import numpy as np
 from nilearn import image, masking
 
-from .utils import cross_correlation, get_resource_path
+from . import utils
 
 
-def feature_time_series(mel_mix, mc):
+def feature_time_series(mel_mix, motpars):
     """Extract maximum motion parameter correlation scores from components.
 
     This function determines the maximum robust correlation of each component
@@ -19,7 +19,7 @@ def feature_time_series(mel_mix, mc):
     mel_mix : str
         Full path of the melodic_mix text file.
         Stored array is (time x component).
-    mc : str
+    motpars : str
         Full path of the text file containing the realignment parameters.
         Motion parameters are (time x 6), with the first three columns being
         rotation parameters (in radians) and the final three being translation
@@ -31,59 +31,53 @@ def feature_time_series(mel_mix, mc):
         Array of the maximum RP correlation feature scores for the components
         of the melodic_mix file.
     """
+    if isinstance(motpars, str):
+        motpars = utils.load_motpars(motpars, source="auto")
+    assert (motpars.ndim == 2) and (motpars.shape[1] == 6), "Wrong shape"
+
     # Read melodic mix file (IC time-series), subsequently define a set of
     # squared time-series
-    mix = np.loadtxt(mel_mix)
-
-    # Read motion parameter file
-    rp6 = np.loadtxt(mc)
+    mixing = np.loadtxt(mel_mix)
 
     # Determine the derivatives of the RPs (add zeros at time-point zero)
-    _, nparams = rp6.shape
-    rp6_der = np.vstack((
-        np.zeros(nparams),
-        np.diff(rp6, axis=0)
-    ))
+    _, n_params = motpars.shape
+    rp6_der = np.vstack((np.zeros(n_params), np.diff(motpars, axis=0)))
 
     # Create an RP-model including the RPs and its derivatives
-    rp12 = np.hstack((rp6, rp6_der))
+    rp12 = np.hstack((motpars, rp6_der))
 
     # add the fw and bw shifted versions
-    rp12_1fw = np.vstack((
-        np.zeros(2 * nparams),
-        rp12[:-1]
-    ))
-    rp12_1bw = np.vstack((
-        rp12[1:],
-        np.zeros(2 * nparams)
-    ))
+    rp12_1fw = np.vstack((np.zeros(2 * n_params), rp12[:-1]))
+    rp12_1bw = np.vstack((rp12[1:], np.zeros(2 * n_params)))
     rp_model = np.hstack((rp12, rp12_1fw, rp12_1bw))
 
     # Determine the maximum correlation between RPs and IC time-series
-    nsplits = 1000
-    nmixrows, nmixcols = mix.shape
-    nrows_to_choose = int(round(0.9 * nmixrows))
+    N_SPLITS = 1000
+    n_vols, n_components = mixing.shape
+    n_rows_to_choose = int(round(0.9 * n_vols))
 
     # Max correlations for multiple splits of the dataset (for a robust
     # estimate)
-    max_correls = np.empty((nsplits, nmixcols))
-    for i in range(nsplits):
+    max_correls = np.empty((N_SPLITS, n_components))
+    for i_split in range(N_SPLITS):
         # Select a random subset of 90% of the dataset rows
         # (*without* replacement)
-        chosen_rows = np.random.choice(a=range(nmixrows),
-                                       size=nrows_to_choose,
-                                       replace=False)
+        chosen_rows = np.random.choice(
+            a=range(n_vols), size=n_rows_to_choose, replace=False
+        )
 
         # Combined correlations between RP and IC time-series, squared and
         # non squared
-        correl_nonsquared = cross_correlation(mix[chosen_rows],
-                                              rp_model[chosen_rows])
-        correl_squared = cross_correlation(mix[chosen_rows]**2,
-                                           rp_model[chosen_rows]**2)
+        correl_nonsquared = utils.cross_correlation(
+            mixing[chosen_rows], rp_model[chosen_rows]
+        )
+        correl_squared = utils.cross_correlation(
+            mixing[chosen_rows] ** 2, rp_model[chosen_rows] ** 2
+        )
         correl_both = np.hstack((correl_squared, correl_nonsquared))
 
         # Maximum absolute temporal correlation for every IC
-        max_correls[i] = np.abs(correl_both).max(axis=1)
+        max_correls[i_split] = np.abs(correl_both).max(axis=1)
 
     # Feature score is the mean of the maximum correlation over all the random
     # splits
@@ -177,7 +171,7 @@ def feature_spatial(mel_IC):
     mel_IC_img = nib.load(mel_IC)
     num_ICs = mel_IC_img.shape[3]
 
-    masks_dir = get_resource_path()
+    masks_dir = utils.get_resource_path()
     csf_mask = os.path.join(masks_dir, "mask_csf.nii.gz")
     edge_mask = os.path.join(masks_dir, "mask_edge.nii.gz")
     out_mask = os.path.join(masks_dir, "mask_out.nii.gz")
@@ -198,8 +192,10 @@ def feature_spatial(mel_IC):
         tot_sum = np.sum(temp_IC_data)
 
         if tot_sum == 0:
-            print("\t- The spatial map of component {} is empty. "
-                  "Please check!".format(i + 1))
+            print(
+                "\t- The spatial map of component {} is empty. "
+                "Please check!".format(i + 1)
+            )
 
         # Get sum of Z-values of the voxels located within the CSF
         # (calculate via the mean and number of non-zero voxels)
