@@ -1,11 +1,9 @@
 """Functions to calculate ICA-AROMA features for component classification."""
-import os
-
 import nibabel as nib
 import numpy as np
 from nilearn import image, masking
 
-from .utils import cross_correlation, get_resource_path
+from .utils import cross_correlation
 
 
 def feature_time_series(mel_mix, mc):

@@ -185,6 +185,6 @@ def aroma_workflow(
 
     if den_type != "no":
         print("Step 3) Data denoising")
-        utils.denoising(fsl_dir, in_file, out_dir, mel_mix, den_type, motion_ICs)
+        utils.denoising(fsl_dir, in_file, out_dir, mixing, den_type, motion_ICs)
 
     print("Finished")
