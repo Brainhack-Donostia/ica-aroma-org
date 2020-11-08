@@ -2,6 +2,7 @@
 import os
 import os.path as op
 import shutil
+from tempfile import mkstemp
 
 import nibabel as nib
 import numpy as np
@@ -95,6 +96,9 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
                            thresholded Z-statistical maps located in
                            melodic.ica/stats/
     """
+    temp_file = mkstemp(suffix=".nii.gz")
+    mask.to_filename(temp_file)
+
     # Define the 'new' MELODIC directory and predefine some associated files
     mel_dir = op.join(out_dir, 'melodic.ica')
     mel_IC = op.join(mel_dir, 'melodic_IC.nii.gz')
@@ -157,7 +161,7 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
                                op.join(fsl_dir, 'melodic'),
                                in_file,
                                mel_dir,
-                               mask,
+                               temp_file,
                                dim,
                                TR
                            )
@@ -196,6 +200,8 @@ def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
         "stat * mask[:, :, :, None]", stat=zstat_4d_img, mask=mask
     )
     zstat_4d_img.to_filename(mel_IC_thr)
+
+    os.remove(temp_file)
     return mel_IC_thr, mel_IC_mix, mel_FT_mix
 
 
