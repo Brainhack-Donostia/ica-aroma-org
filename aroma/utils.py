@@ -5,12 +5,11 @@ import shutil
 
 import nibabel as nib
 import numpy as np
-from nilearn import masking
+from nilearn import masking, image
 from nilearn._utils import load_niimg
 from scipy import stats
 from tedana.decomposition import tedica, ma_pca
 from tedana.utils import get_spectrum
-from tedana.stats import computefeats2
 
 from .mixture import GGM
 
@@ -51,16 +50,27 @@ def run_ica(in_file, mask, n_components=-1, t_r=None):
             in_file, mask, criteria="mdl")
     n_components = len(varex)
     # kept_data is SxT, instead of nilearn-standard TxS
-    kept_data = np.dot(voxel_comp_weights, mixing_pca.T)
+    voxel_kept_comp_weighted = voxel_comp_weights * varex[None, :]
+    kept_data = np.dot(voxel_kept_comp_weighted, mixing_pca.T)
     kept_data = stats.zscore(kept_data, axis=1)  # variance normalize time series
     kept_data = stats.zscore(kept_data, axis=None)  # variance normalize everything
     assert kept_data.shape == (n_voxels, n_vols)
     print("{} components retained by PCA".format(n_components))
 
-    mixing_ica = tedica(kept_data, n_components, fixed_seed=42, maxit=500, maxrestart=10)
+    mixing_ica = tedica(kept_data, n_components, fixed_seed=1, maxit=500, maxrestart=5)
     assert mixing_ica.shape == (n_vols, n_components)
-    components_arr_z = computefeats2(in_data.T, mixing_ica, np.ones(n_voxels, int))
+
+    # Compute component maps
+    data_z = stats.zscore(in_data, axis=0)
+    mixing_z = stats.zscore(mixing_ica, axis=0)
+    components_arr_z = np.linalg.lstsq(mixing_z, data_z, rcond=None)[0].T
     assert components_arr_z.shape == (n_voxels, n_components)
+    # compute skews to determine signs based on unnormalized weights,
+    # correct mixing matrix & component map signs based on spatial distribution tails
+    signs = stats.skew(components_arr_z, axis=0)
+    signs /= np.abs(signs)
+    mixing_z = mixing_z * signs
+    components_arr_z *= signs
 
     THRESH = 0.5
     # Preallocate arrays
@@ -70,18 +80,19 @@ def run_ica(in_file, mask, n_components=-1, t_r=None):
         # Mixture modeling
         component_arr = components_arr_z[:, i_comp]
         ggm = GGM()
-        ggm.estimate(component_arr, niter=100000)
+        ggm.estimate(component_arr, niter=1000)
         gauss_probs, gamma_probs = ggm.posterior(component_arr)
         # apply threshold
         component_arr[gamma_probs < THRESH] = 0
         components_arr_z_thresh[:, i_comp] = component_arr
 
         # Now get the FT array
+        # TODO: Check that (1) freqs are same and (2) range from 0 to Nyquist
         spectrum, freqs = get_spectrum(mixing_ica[:, i_comp], t_r)
         mixing_power_spectra.append(spectrum)
     components_img_z_thresh = masking.unmask(components_arr_z_thresh.T, mask)
-    mixing_power_spectra = np.hstack(mixing_power_spectra)
-    assert mixing_power_spectra.shape == (n_components, len(freqs))
+    mixing_power_spectra = np.stack(mixing_power_spectra, axis=-1)
+    assert mixing_power_spectra.shape == (len(freqs), n_components), mixing_power_spectra.shape
 
     return components_img_z_thresh, mixing_ica, mixing_power_spectra
 
@@ -127,18 +138,15 @@ def register2MNI(fsl_dir, in_file, out_file, affmat, warp):
     # is already in MNI152 space. In that case only check if resampling to
     # 2mm is needed
     if not affmat and not warp:
-        in_img = nib.load(in_file)
+        in_img = load_niimg(in_file)
         # Get 3D voxel size
         pixdim1, pixdim2, pixdim3 = in_img.header.get_zooms()[:3]
 
         # If voxel size is not 2mm isotropic, resample the data, otherwise
         # copy the file
         if (pixdim1 != 2) or (pixdim2 != 2) or (pixdim3 != 2):
-            os.system(' '.join([op.join(fsl_dir, 'flirt'),
-                                ' -ref ' + ref,
-                                ' -in ' + in_file,
-                                ' -out ' + out_file,
-                                ' -applyisoxfm 2 -interp trilinear']))
+            resampled_img = image.resample_to_img(in_img, target_img=ref, interpolation="linear")
+            resampled_img.to_filename(out_file)
         else:
             os.copyfile(in_file, out_file)
 

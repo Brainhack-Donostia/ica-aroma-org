@@ -1,6 +1,7 @@
 import numpy as np
 
 from nilearn import image, masking
+from threadpoolctl import threadpool_limits
 
 from aroma import utils
 
@@ -30,4 +31,5 @@ def test_run_ica(nilearn_data):
     mask = masking.compute_epi_mask(in_file)
     smoothed_img = image.smooth_img(in_file, fwhm=8)
     t_r = 2.
-    components, mixing, ft = utils.run_ica(smoothed_img, mask, t_r=t_r)
+    with threadpool_limits(limits=1, user_api=None):
+        components, mixing, ft = utils.run_ica(smoothed_img, mask, t_r=t_r)
