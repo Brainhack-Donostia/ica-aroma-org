@@ -27,11 +27,11 @@ def test_feature_time_series(nilearn_data):
     max_RP_corr = features.feature_time_series(mel_mix, mc_file)
 
     # Expected values
-    true_max_RP_corr = np.array(
-        [0.65255575, 0.86003032, 0.88690363, 0.61399576, 0.43840624]
-    )
+    true_features = op.join(test_path, "feature_scores.txt")
+    true_features = np.loadtxt(true_features)
+    true_max_RP_corr = true_features[:, 0]
 
-    assert np.allclose(max_RP_corr[: len(true_max_RP_corr)], true_max_RP_corr, atol=1e-2)
+    assert np.allclose(max_RP_corr, true_max_RP_corr, atol=1e-2)
 
 
 def test_feature_frequency(nilearn_data):
@@ -43,6 +43,8 @@ def test_feature_frequency(nilearn_data):
     HFC = features.feature_frequency(mel_T_mix, TR=2)
 
     # Expected values
-    true_HFC = np.array([0.96279762, 0.08234127, 0.13194444, 0.96279762, 0.04513889])
+    true_features = op.join(test_path, "feature_scores.txt")
+    true_features = np.loadtxt(true_features)
+    true_HFC = true_features[:, 2]
 
-    assert np.allclose(HFC[: len(true_HFC)], true_HFC, atol=1e-2)
+    assert np.allclose(HFC, true_HFC, atol=1e-2)
