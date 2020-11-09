@@ -48,3 +48,21 @@ def test_feature_frequency(nilearn_data):
     true_HFC = true_features[:, 2]
 
     assert np.allclose(HFC, true_HFC, atol=1e-2)
+
+
+def test_feature_spatial(nilearn_data):
+
+    # Get path to mel_mix file
+    test_path = op.join(get_tests_resource_path(), "integration_test_ground_truth")
+    mel_IC_MNI = op.join(test_path, "melodic_IC_thr_MNI2mm.nii.gz")
+
+    edge_fract, csf_fract = features.feature_spatial(mel_IC_MNI)
+
+    # Expected values
+    true_features = op.join(test_path, "feature_scores.txt")
+    true_features = np.loadtxt(true_features)
+    true_edge_fract = true_features[:, 1]
+    true_csf_fract = true_features[:, 3]
+
+    assert np.allclose(edge_fract, true_edge_fract, atol=1e-2)
+    assert np.allclose(csf_fract, true_csf_fract, atol=1e-2)
