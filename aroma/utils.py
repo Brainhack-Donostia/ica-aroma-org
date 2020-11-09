@@ -5,138 +5,67 @@ import shutil
 
 import nibabel as nib
 import numpy as np
-from nilearn import image, masking
+from nilearn import masking
+from scipy import stats
+from tedana.decomposition import tedica, ma_pca
+from tedana.utils import get_spectrum
+from tedana.stats import computefeats2
+
+from .mixture import GGM
 
 
-def runICA(fsl_dir, in_file, out_dir, mel_dir_in, mask, dim, TR):
-    """Run MELODIC and merge the thresholded ICs into a single 4D nifti file.
+def runICA(in_file, mask, n_components, TR):
+    """Run ICA and collect relevant outputs.
 
     Parameters
     ----------
-    fsl_dir : str
-        Full path of the bin-directory of FSL
     in_file : str
-        Full path to the fMRI data file (nii.gz) on which MELODIC
+        Full path to the fMRI data file (nii.gz) on which ICA
         should be run
-    out_dir : str
-        Full path of the output directory
-    mel_dir_in : str or None
-        Full path of the MELODIC directory in case it has been run
-        before, otherwise None.
     mask : str
         Full path of the mask to be applied during MELODIC
-    dim : int
-        Dimensionality of ICA
+    n_components : int
+        Dimensionality of ICA. If -1, then dimensionality will be automatically detected.
     TR : float
         TR (in seconds) of the fMRI data
 
-    Output
-    ------
-    melodic.ica/: MELODIC directory
-    melodic_IC_thr.nii.gz: Merged file containing the mixture modeling
-                           thresholded Z-statistical maps located in
-                           melodic.ica/stats/
+    Returns
+    -------
+    components_img_z_thresh : img_like
+    mixing_ica : array_like
+    mixing_power_spectra : array_like
     """
-    # Define the 'new' MELODIC directory and predefine some associated files
-    mel_dir = op.join(out_dir, 'melodic.ica')
-    mel_IC = op.join(mel_dir, 'melodic_IC.nii.gz')
-    mel_IC_mix = op.join(mel_dir, 'melodic_mix')
-    mel_IC_thr = op.join(out_dir, 'melodic_IC_thr.nii.gz')
+    voxel_comp_weights, varex, varex_norm, mixing_pca = ma_pca.ma_pca(
+            in_file, mask, criteria="mdl")
+    n_components = len(varex)
+    # kept_data is SxT, instead of nilearn-standard TxS
+    kept_data = np.dot(voxel_comp_weights, mixing_pca.T)
+    kept_data = stats.zscore(kept_data, axis=1)  # variance normalize time series
+    kept_data = stats.zscore(kept_data, axis=None)  # variance normalize everything
 
-    # When a MELODIC directory is specified,
-    # check whether all needed files are present.
-    # Otherwise... run MELODIC again
-    if (mel_dir_in and op.isfile(op.join(mel_dir_in, 'melodic_IC.nii.gz'))
-            and op.isfile(op.join(mel_dir_in, 'melodic_FTmix'))
-            and op.isfile(op.join(mel_dir_in, 'melodic_mix'))):
-        print('  - The existing/specified MELODIC directory will be used.')
+    mixing_ica = tedica.tedica(kept_data, n_components, fixed_seed=42, maxit=500, maxrestart=10)
+    component_maps_z = masking.unmask(computefeats2(in_file, mixing_ica, mask), mask)
 
-        # If a 'stats' directory is present (contains thresholded spatial maps)
-        # create a symbolic link to the MELODIC directory.
-        # Otherwise create specific links and
-        # run mixture modeling to obtain thresholded maps.
-        if op.isdir(op.join(mel_dir_in, 'stats')):
-            os.symlink(mel_dir_in, mel_dir)
-        else:
-            print("  - The MELODIC directory does not contain the required "
-                  "'stats' folder. Mixture modeling on the Z-statistical "
-                  "maps will be run.")
+    THRESH = 0.5
+    components_arr = masking.apply_mask(component_maps_z, mask)
+    thresh_data = np.zeros(components_arr.shape)
+    for i_comp in range(components_arr.shape[0]):
+        arr = components_arr[i_comp, :]
+        ggm = GGM()
+        ggm.estimate(arr, niter=100000)
+        gauss_probs, gamma_probs = ggm.posterior(arr)
+        # apply threshold
+        arr[gamma_probs < THRESH] = 0
+        thresh_data[i_comp, :] = arr
+    components_img_z_thresh = masking.unmask(thresh_data, mask)
 
-            # Create symbolic links to the items in the specified melodic
-            # directory
-            os.makedirs(mel_dir)
-            for item in os.listdir(mel_dir_in):
-                os.symlink(op.join(mel_dir_in, item),
-                           op.join(mel_dir, item))
-
-            # Run mixture modeling
-            melodic_command = ("{0} --in={1} --ICs={1} --mix={2} --out_dir={3} "
-                               "--0stats --mmthresh=0.5").format(
-                                    op.join(fsl_dir, 'melodic'),
-                                    mel_IC,
-                                    mel_IC_mix,
-                                    mel_dir,
-                               )
-            os.system(melodic_command)
-    else:
-        # If a melodic directory was specified, display that it did not
-        # contain all files needed for ICA-AROMA (or that the directory
-        # does not exist at all)
-        if mel_dir_in:
-            if not op.isdir(mel_dir_in):
-                print('  - The specified MELODIC directory does not exist. '
-                      'MELODIC will be run separately.')
-            else:
-                print('  - The specified MELODIC directory does not contain '
-                      'the required files to run ICA-AROMA. MELODIC will be '
-                      'run separately.')
-
-        # Run MELODIC
-        melodic_command = ("{0} --in={1} --outdir={2} --mask={3} --dim={4} "
-                           "--Ostats --nobet --mmthresh=0.5 --report "
-                           "--tr={5}").format(
-                               op.join(fsl_dir, 'melodic'),
-                               in_file,
-                               mel_dir,
-                               mask,
-                               dim,
-                               TR
-                           )
-        os.system(melodic_command)
-
-    # Get number of components
-    mel_IC_img = nib.load(mel_IC)
-    nr_ICs = mel_IC_img.shape[3]
-
-    # Merge mixture modeled thresholded spatial maps. Note! In case that
-    # mixture modeling did not converge, the file will contain two spatial
-    # maps. The latter being the results from a simple null hypothesis test.
-    # In that case, this map will have to be used (first one will be empty).
-    zstat_imgs = []
-    for i in range(1, nr_ICs + 1):
-        # Define thresholded zstat-map file
-        z_temp = op.join(mel_dir, "stats", "thresh_zstat{0}.nii.gz".format(i))
-
-        # Get number of volumes in component's thresholded image
-        z_temp_img = nib.load(z_temp)
-        if z_temp_img.ndim == 4:
-            len_IC = z_temp_img.shape[3]
-            # Extract last spatial map within the thresh_zstat file
-            zstat_img = image.index_img(z_temp_img, len_IC - 1)
-        else:
-            zstat_img = z_temp_img
-
-        zstat_imgs.append(zstat_img)
-
-    # Merge to 4D
-    zstat_4d_img = image.concat_imgs(zstat_imgs)
-
-    # Apply the mask to the merged image (in case a melodic-directory was
-    # predefined and run with a different mask)
-    zstat_4d_img = image.math_img(
-        "stat * mask[:, :, :, None]", stat=zstat_4d_img, mask=mask
-    )
-    zstat_4d_img.to_filename(mel_IC_thr)
+    # Now get the FT array
+    mixing_power_spectra = []
+    for i_comp in range(components_arr.shape[0]):
+        spectrum, freqs = get_spectrum(mixing_ica[:, i_comp], TR)
+        mixing_power_spectra.append(spectrum)
+    mixing_power_spectra = np.hstack(mixing_power_spectra)
+    return components_img_z_thresh, mixing_ica, mixing_power_spectra
 
 
 def register2MNI(fsl_dir, in_file, out_file, affmat, warp):
