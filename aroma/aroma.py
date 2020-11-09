@@ -22,6 +22,7 @@ def aroma_workflow(
     TR=None,
     overwrite=False,
     generate_plots=True,
+    csf=None,
 ):
     """Run the AROMA workflow.
 
