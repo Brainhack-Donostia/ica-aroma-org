@@ -6,6 +6,7 @@ import shutil
 import nibabel as nib
 import numpy as np
 from nilearn import masking
+from nilearn._utils import load_niimg
 from scipy import stats
 from tedana.decomposition import tedica, ma_pca
 from tedana.utils import get_spectrum
@@ -14,7 +15,7 @@ from tedana.stats import computefeats2
 from .mixture import GGM
 
 
-def runICA(in_file, mask, n_components, TR):
+def run_ica(in_file, mask, n_components=-1, t_r=None):
     """Run ICA and collect relevant outputs.
 
     Parameters
@@ -23,48 +24,65 @@ def runICA(in_file, mask, n_components, TR):
         Full path to the fMRI data file (nii.gz) on which ICA
         should be run
     mask : str
-        Full path of the mask to be applied during MELODIC
-    n_components : int
-        Dimensionality of ICA. If -1, then dimensionality will be automatically detected.
-    TR : float
-        TR (in seconds) of the fMRI data
+        Full path of the mask to be applied during ICA
+    n_components : int, optional
+        Dimensionality of ICA.
+        If -1, then dimensionality will be automatically detected.
+        Default is -1.
+    t_r : float or None, optional
+        Repetition time (TR), in seconds, of the fMRI data.
+        If None, then TR will be inferred from the data file's header.
+        Default is None.
 
     Returns
     -------
-    components_img_z_thresh : img_like
-    mixing_ica : array_like
-    mixing_power_spectra : array_like
+    components_img_z_thresh : 4D img_like
+    mixing_ica : (T x C) array_like
+    mixing_power_spectra : (F x C) array_like
     """
-    voxel_comp_weights, varex, varex_norm, mixing_pca = ma_pca.ma_pca(
+    in_file = load_niimg(in_file)
+    mask = load_niimg(mask)
+    in_data = masking.apply_mask(in_file, mask)
+    n_vols, n_voxels = in_data.shape
+
+    # Start with a PCA to determine number of components and
+    # dimensionally reduce data
+    voxel_comp_weights, varex, varex_norm, mixing_pca = ma_pca(
             in_file, mask, criteria="mdl")
     n_components = len(varex)
     # kept_data is SxT, instead of nilearn-standard TxS
     kept_data = np.dot(voxel_comp_weights, mixing_pca.T)
     kept_data = stats.zscore(kept_data, axis=1)  # variance normalize time series
     kept_data = stats.zscore(kept_data, axis=None)  # variance normalize everything
+    assert kept_data.shape == (n_voxels, n_vols)
+    print("{} components retained by PCA".format(n_components))
 
-    mixing_ica = tedica.tedica(kept_data, n_components, fixed_seed=42, maxit=500, maxrestart=10)
-    component_maps_z = masking.unmask(computefeats2(in_file, mixing_ica, mask), mask)
+    mixing_ica = tedica(kept_data, n_components, fixed_seed=42, maxit=500, maxrestart=10)
+    assert mixing_ica.shape == (n_vols, n_components)
+    components_arr_z = computefeats2(in_data.T, mixing_ica, np.ones(n_voxels, int))
+    assert components_arr_z.shape == (n_voxels, n_components)
 
     THRESH = 0.5
-    components_arr = masking.apply_mask(component_maps_z, mask)
-    thresh_data = np.zeros(components_arr.shape)
-    for i_comp in range(components_arr.shape[0]):
-        arr = components_arr[i_comp, :]
-        ggm = GGM()
-        ggm.estimate(arr, niter=100000)
-        gauss_probs, gamma_probs = ggm.posterior(arr)
-        # apply threshold
-        arr[gamma_probs < THRESH] = 0
-        thresh_data[i_comp, :] = arr
-    components_img_z_thresh = masking.unmask(thresh_data, mask)
-
-    # Now get the FT array
+    # Preallocate arrays
+    components_arr_z_thresh = np.zeros(components_arr_z.shape)
     mixing_power_spectra = []
-    for i_comp in range(components_arr.shape[0]):
-        spectrum, freqs = get_spectrum(mixing_ica[:, i_comp], TR)
+    for i_comp in range(components_arr_z.shape[1]):
+        # Mixture modeling
+        component_arr = components_arr_z[:, i_comp]
+        ggm = GGM()
+        ggm.estimate(component_arr, niter=100000)
+        gauss_probs, gamma_probs = ggm.posterior(component_arr)
+        # apply threshold
+        component_arr[gamma_probs < THRESH] = 0
+        components_arr_z_thresh[:, i_comp] = component_arr
+
+        # Now get the FT array
+        spectrum, freqs = get_spectrum(mixing_ica[:, i_comp], t_r)
         mixing_power_spectra.append(spectrum)
+    components_img_z_thresh = masking.unmask(components_arr_z_thresh.T, mask)
     mixing_power_spectra = np.hstack(mixing_power_spectra)
+    assert mixing_power_spectra.shape == (n_components, len(freqs))
+
     return components_img_z_thresh, mixing_ica, mixing_power_spectra
 
 

@@ -180,7 +180,7 @@ def aroma_workflow(
 
     # Run ICA-AROMA
     print("Step 1) MELODIC")
-    utils.runICA(fsl_dir, in_file, out_dir, mel_dir, new_mask, dim, TR)
+    utils.run_ica(fsl_dir, in_file, out_dir, mel_dir, new_mask, dim, TR)
 
     print("Step 2) Automatic classification of the components")
     print("  - registering the spatial maps to MNI")
